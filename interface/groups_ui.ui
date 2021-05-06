@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Groups</class>
+ <widget class="QWidget" name="Groups">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>898</width>
+    <height>573</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Группы обучающихся</string>
+  </property>
+  <layout class="QHBoxLayout" name="hL_Groups" stretch="1,2">
+   <item>
+    <widget class="QWidget" name="widget_groups_input_box" native="true">
+     <layout class="QVBoxLayout" name="vL_widget_groups_input_box">
+      <item>
+       <widget class="QWidget" name="widget_groups_edit_buts" native="true">
+        <layout class="QHBoxLayout" name="hL_widget_groups_edit_buts">
+         <item>
+          <widget class="QPushButton" name="pushButton_groups_add">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Добавить новую запись</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_groups_save">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Сохранить в выбранную запись</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_groups_name">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Наименование группы</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="textEdit_groups_name"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_groups_numprog">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Образовательная программа группы</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboBox_groups_numprog">
+        <property name="placeholderText">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_groups_class">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Уровень образования группы (не обязательно)
+(8, 9, 11 классы)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="textEdit"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_groups_back">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Назад</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget_groups_list_box" native="true">
+     <layout class="QVBoxLayout" name="vL_widget_groups_list_box">
+      <item>
+       <widget class="QWidget" name="widget_left_up_groups" native="true">
+        <layout class="QHBoxLayout" name="hL_widget_left_up_groups">
+         <item>
+          <widget class="QLabel" name="label_search_groups">
+           <property name="text">
+            <string>Поиск:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_search_groups"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_groups_delete">
+           <property name="text">
+            <string>Удалить выбранную запись</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QScrollArea" name="scrollArea_groups_list">
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="sAWContent_groups_list">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>466</width>
+           <height>488</height>
+          </rect>
+         </property>
+         <layout class="QVBoxLayout" name="vL_sAWContent_groups_list"/>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
