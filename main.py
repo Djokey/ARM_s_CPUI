@@ -3,6 +3,7 @@ from headers_ui import *
 from programs_ui import *
 from teachers_ui import *
 from groups_ui import *
+from subjects_ui import *
 from arm_db import *
 import sys
 import os
@@ -39,6 +40,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.groups_ui = Ui_Groups()
         self.groups_ui.setupUi(self.ui.widget_groups)
 
+        self.ui.widget_subjects = QtWidgets.QWidget(self.ui.widget_roster_editors)
+        self.ui.hL_widget_roster_editors.addWidget(self.ui.widget_subjects)
+        self.sub_ui = Ui_Subjects()
+        self.sub_ui.setupUi(self.ui.widget_subjects)
+
         self.clear_for_start()
         self.setup_buttons_funcs()
         self.load_for_start()
@@ -62,11 +68,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_teachers.show()
         self.load_db_teachers()
 
-    # Func for edit database table Teachers
+    # Func for edit database table Groups
     def groups_win(self):
         self.ui.widget_roster.hide()
         self.ui.widget_groups.show()
         self.load_db_groups()
+
+    # Func for edit database table Subjects
+    def subjects_win(self):
+        self.ui.widget_roster.hide()
+        self.ui.widget_subjects.show()
+        self.load_db_subjects()
 
     # Func for setup all buttons
     def setup_buttons_funcs(self):
@@ -353,7 +365,7 @@ class MainWindow(QtWidgets.QMainWindow):
                            "id_prog = '{2}' " \
                            "WHERE id_group = '{3}'".format(self.groups_ui.textEdit_groups_name.toPlainText(),
                                                            self.groups_ui.textEdit_groups_class.toPlainText(),
-                                                           str(self.groups_ui.comboBox_groups_numprog.currentData()),
+                                                           str(self.groups_ui.comboBox_groups_prog.currentData()),
                                                            groups_selected)
                     _db.query(_sql)
                     self.load_db_groups()
@@ -365,7 +377,7 @@ class MainWindow(QtWidgets.QMainWindow):
                        "'{1}'," \
                        "'{2}')".format(self.groups_ui.textEdit_groups_class.toPlainText(),
                                        self.groups_ui.textEdit_groups_name.toPlainText(),
-                                       str(self.groups_ui.comboBox_groups_numprog.currentData()))
+                                       str(self.groups_ui.comboBox_groups_prog.currentData()))
                 _db.query(_sql)
                 self.load_db_groups()
             elif type_post == "del":
@@ -390,6 +402,84 @@ class MainWindow(QtWidgets.QMainWindow):
                     _db.query(_sql)
                     self.load_db_groups()
 
+        def subjects_control_db(type_post):
+            subjects_list = self.sub_ui.sAWContent_sub_list.children()
+            _set_doc_warning = 1
+            subjects_selected = ''
+            if type_post == 'save':
+                for i in subjects_list:
+                    if i.objectName() == 'vL_sAWContent_sub_list':
+                        pass
+                    else:
+                        if i.isChecked():
+                            subjects_selected = i.objectName().split('_')[-1]
+                            _set_doc_warning = 0
+                            break
+                        else:
+                            _set_doc_warning = 1
+                if _set_doc_warning:
+                    set_doc_warning("Ошибка (не выбрана запись для изменения)",
+                                    'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
+                                    'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
+                                    '"Сохранить в выбранную запись"')
+                else:
+                    _db = ARMDataBase()
+                    _sql = "UPDATE subjects SET " \
+                           "sub_name = '{0}', " \
+                           "sub_price_hour = '{1}', " \
+                           "id_teacher = '{2}', " \
+                           "sub_price_month = '{3}', " \
+                           "id_prog = '{4}', " \
+                           "sub_hours = '{5}' " \
+                           "WHERE id_sub = '{6}'".format(self.sub_ui.textEdit_sub_name.toPlainText(),
+                                                         self.sub_ui.lineEdit_sub_tax.text(),
+                                                         str(self.sub_ui.comboBox_sub_teach.currentData()),
+                                                         self.sub_ui.lineEdit_sub_price.text(),
+                                                         str(self.sub_ui.comboBox_sub_prog.currentData()),
+                                                         self.sub_ui.lineEdit_sub_hours.text(),
+                                                         subjects_selected)
+                    _db.query(_sql)
+                    self.load_db_subjects()
+            elif type_post == 'add':
+                _db = ARMDataBase()
+                _sql = "INSERT INTO subjects VALUES(" \
+                       "NULL," \
+                       "'{0}'," \
+                       "'{1}'," \
+                       "'{2}'," \
+                       "'{3}'," \
+                       "'{4}'," \
+                       "NULL," \
+                       "'{5}')".format(self.sub_ui.textEdit_sub_name.toPlainText(),
+                                       self.sub_ui.lineEdit_sub_tax.text(),
+                                       str(self.sub_ui.comboBox_sub_teach.currentData()),
+                                       self.sub_ui.lineEdit_sub_price.text(),
+                                       str(self.sub_ui.comboBox_sub_prog.currentData()),
+                                       self.sub_ui.lineEdit_sub_hours.text())
+                _db.query(_sql)
+                self.load_db_subjects()
+            elif type_post == "del":
+                for i in subjects_list:
+                    if i.objectName() == 'vL_sAWContent_sub_list':
+                        pass
+                    else:
+                        if i.isChecked():
+                            subjects_selected = i.objectName().split('_')[-1]
+                            _set_doc_warning = 0
+                            break
+                        else:
+                            _set_doc_warning = 1
+                if _set_doc_warning:
+                    set_doc_warning("Ошибка (не выбрана запись для удаления)",
+                                    'Сначала выберите запись для удаления.\n\nНажмите на нужную запись, '
+                                    'чтобы выбрать ее, а потом нажмите на кнопку '
+                                    '"Удалить выбранную запись"')
+                else:
+                    _db = ARMDataBase()
+                    _sql = "DELETE FROM subjects WHERE id_sub={0}".format(subjects_selected)
+                    _db.query(_sql)
+                    self.load_db_subjects()
+
         def headers_back():
             self.ui.widget_headers.hide()
             self.ui.widget_roster.show()
@@ -406,6 +496,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.widget_groups.hide()
             self.ui.widget_roster.show()
 
+        def subjects_back():
+            self.ui.widget_subjects.hide()
+            self.ui.widget_roster.show()
+
         # Setup buts
         self.ui.pushButton_print_notes.clicked.connect(lambda: notes_checked())
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_checked())
@@ -414,6 +508,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_programs_roster.clicked.connect(lambda: self.programs_win())
         self.ui.pushButton_teachers_roster.clicked.connect(lambda: self.teachers_win())
         self.ui.pushButton_groups_roster.clicked.connect(lambda: self.groups_win())
+        self.ui.pushButton_subjects_roster.clicked.connect(lambda: self.subjects_win())
 
         self.head_ui.pushButton_headers_add.clicked.connect(lambda: headers_control_db('add'))
         self.head_ui.pushButton_headers_save.clicked.connect(lambda: headers_control_db('save'))
@@ -443,11 +538,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.groups_ui.lineEdit_search_groups.textEdited.connect(
             lambda: self.load_db_groups(self.groups_ui.lineEdit_search_groups.text()))
 
+        self.sub_ui.pushButton_sub_add.clicked.connect(lambda: subjects_control_db('add'))
+        self.sub_ui.pushButton_sub_save.clicked.connect(lambda: subjects_control_db('save'))
+        self.sub_ui.pushButton_sub_delete.clicked.connect(lambda: subjects_control_db('del'))
+        self.sub_ui.pushButton_sub_back.clicked.connect(lambda: subjects_back())
+        self.sub_ui.lineEdit_search_sub.textEdited.connect(
+            lambda: self.load_db_groups(self.sub_ui.lineEdit_search_sub.text()))
+
     def clear_for_start(self):
         self.ui.widget_headers.hide()
         self.ui.widget_programs.hide()
         self.ui.widget_teachers.hide()
         self.ui.widget_groups.hide()
+        self.ui.widget_subjects.hide()
 
     def load_for_start(self):
         notes_list = os.listdir(os.path.abspath(os.curdir) + r'/Документы/Записки/')
@@ -546,7 +649,7 @@ class MainWindow(QtWidgets.QMainWindow):
             searcher = ''
             _search_text = search_text
             for h in heads:
-                if h is not None or h != '':
+                if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
                 _search_text = search_text.lower()
@@ -603,7 +706,7 @@ class MainWindow(QtWidgets.QMainWindow):
             searcher = ''
             _search_text = search_text
             for h in progs:
-                if h is not None or h != '':
+                if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
                 _search_text = search_text.lower()
@@ -672,7 +775,7 @@ class MainWindow(QtWidgets.QMainWindow):
             searcher = ''
             _search_text = search_text
             for h in teachs:
-                if h is not None or h != '':
+                if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
                 _search_text = search_text.lower()
@@ -706,8 +809,8 @@ class MainWindow(QtWidgets.QMainWindow):
             _sql1 = "SELECT * FROM groups WHERE id_group=" + selected_group
             _grp = _db1.query(_sql1)
             self.groups_ui.textEdit_groups_name.setText(_grp[0][2])
-            self.groups_ui.comboBox_groups_numprog.setCurrentIndex(
-                self.groups_ui.comboBox_groups_numprog.findData(_grp[0][3]))
+            self.groups_ui.comboBox_groups_prog.setCurrentIndex(
+                self.groups_ui.comboBox_groups_prog.findData(_grp[0][3]))
             if _grp[0][2] is not None or _grp[0][2] != '':
                 self.groups_ui.textEdit_groups_class.setText(_grp[0][1])
             else:
@@ -735,7 +838,7 @@ class MainWindow(QtWidgets.QMainWindow):
             searcher = ''
             _search_text = search_text
             for h in grps:
-                if h is not None or h != '':
+                if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
                 _search_text = search_text.lower()
@@ -755,9 +858,98 @@ class MainWindow(QtWidgets.QMainWindow):
         programs = _db.query(_sql)
         _programs = []
 
-        self.groups_ui.comboBox_groups_numprog.clear()
+        self.groups_ui.comboBox_groups_prog.clear()
         for prog in programs:
-            self.create_combo_box_el(self.groups_ui.comboBox_groups_numprog, prog[0], str(prog[1]))
+            self.create_combo_box_el(self.groups_ui.comboBox_groups_prog, prog[0], str(prog[1]))
+
+    # Loader database for subjects
+    def load_db_subjects(self, search_text=None):
+        clear_list(self.sub_ui.sAWContent_sub_list.children())
+
+        def loader_sub_edits():
+            selected_subject = ''
+            subjects_list = self.sub_ui.sAWContent_sub_list.children()
+            if len(subjects_list) != 2:
+                for sub in subjects_list:
+                    if sub.objectName() != 'vL_sAWContent_sub_list':
+                        if sub.isChecked():
+                            selected_subject = sub.objectName().split('_')[-1]
+                            break
+            else:
+                selected_subject = self.sub_ui.sAWContent_sub_list.children()[-1].objectName().split('_')[-1]
+            _db1 = ARMDataBase()
+            _sql1 = "SELECT * FROM subjects WHERE id_sub=" + selected_subject
+            _sub = _db1.query(_sql1)
+
+            self.sub_ui.textEdit_sub_name.setText(_sub[0][1])
+            self.sub_ui.lineEdit_sub_tax.setText(_sub[0][2])
+            self.sub_ui.comboBox_sub_teach.setCurrentIndex(
+                self.sub_ui.comboBox_sub_teach.findData(_sub[0][3]))
+            self.sub_ui.lineEdit_sub_price.setText(_sub[0][4])
+            self.sub_ui.comboBox_sub_prog.setCurrentIndex(
+                self.sub_ui.comboBox_sub_prog.findData(_sub[0][5]))
+            self.sub_ui.lineEdit_sub_hours.setText(_sub[0][7])
+
+        _db = ARMDataBase()
+        _sql = "SELECT * FROM subjects"
+        subjects = _db.query(_sql)
+        sub_loader = []
+        for i in range(len(subjects)):
+            subs = []
+            for h in subjects[i]:
+                subs.append(h)
+            sub_loader.append(str(subs[0])[:])
+
+            _db = ARMDataBase()
+            _sql = "SELECT teacher_name FROM teachers WHERE id_teacher=" + str(subs[3])
+            sub_teach = _db.query(_sql)
+
+            _db = ARMDataBase()
+            _sql = "SELECT prog_name FROM programs WHERE id_prog=" + str(subs[5])
+            sub_prog = _db.query(_sql)
+
+            subs[0] = 'clb_sub_' + str(subs[0])
+            subs[1] = 'Название: ' + subs[1] + '\n' if subs[1] is not None or subs[1] != '' else ''
+            subs[2] = 'Такса: ' + subs[2] + '\n' if subs[2] is not None or subs[2] != '' else ''
+            subs[3] = 'Преподаватель: ' + sub_teach[0][0] + '\n' if sub_teach[0][0] is not None or sub_teach[0][
+                0] != '' else ''
+            subs[4] = 'Стоимость: ' + subs[4] + '\n' if subs[4] is not None or subs[4] != '' else ''
+            subs[5] = 'Программа: ' + sub_prog[0][0] + '\n' if sub_prog[0][0] is not None or sub_prog[0][
+                0] != '' else ''
+            subs[7] = 'Часы: ' + subs[7] + '\n' if subs[7] is not None or subs[7] != '' else ''
+            searcher = ''
+            _search_text = search_text
+            for h in subs:
+                if h is not None and h != '':
+                    searcher = searcher + h.lower()
+            if _search_text is not None and _search_text != '':
+                _search_text = search_text.lower()
+                if _search_text in searcher:
+                    sub_but = self.create_list_el(subs[0],
+                                                  subs[1] + subs[2] + subs[3] + subs[4] + subs[5] + subs[7],
+                                                  self.sub_ui.sAWContent_sub_list)
+                    sub_but.clicked.connect(lambda: loader_sub_edits())
+            else:
+                sub_but = self.create_list_el(subs[0],
+                                              subs[1] + subs[2] + subs[3] + subs[4] + subs[5] + subs[7],
+                                              self.sub_ui.sAWContent_sub_list)
+                sub_but.clicked.connect(lambda: loader_sub_edits())
+
+        _db = ARMDataBase()
+        _sql = "SELECT * FROM programs"
+        programs = _db.query(_sql)
+        _programs = []
+        self.sub_ui.comboBox_sub_prog.clear()
+        for prog in programs:
+            self.create_combo_box_el(self.sub_ui.comboBox_sub_prog, prog[0], str(prog[1]))
+
+        _db = ARMDataBase()
+        _sql = "SELECT * FROM teachers"
+        teachers = _db.query(_sql)
+        _teachers = []
+        self.sub_ui.comboBox_sub_teach.clear()
+        for teach in teachers:
+            self.create_combo_box_el(self.sub_ui.comboBox_sub_teach, teach[0], str(teach[1]))
 
 
 # Clearing edit list
