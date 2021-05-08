@@ -4,11 +4,13 @@ from programs_ui import *
 from teachers_ui import *
 from groups_ui import *
 from subjects_ui import *
+from students_ui import *
 from arm_db import *
 import sys
 import os
 import win32api
 import win32print
+import datetime
 from PyQt5.QtWidgets import QMessageBox
 
 
@@ -45,6 +47,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sub_ui = Ui_Subjects()
         self.sub_ui.setupUi(self.ui.widget_subjects)
 
+        self.ui.widget_students = QtWidgets.QWidget(self.ui.widget_roster_editors)
+        self.ui.hL_widget_roster_editors.addWidget(self.ui.widget_students)
+        self.stud_ui = Ui_Students()
+        self.stud_ui.setupUi(self.ui.widget_students)
+
         self.clear_for_start()
         self.setup_buttons_funcs()
         self.load_for_start()
@@ -79,6 +86,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_roster.hide()
         self.ui.widget_subjects.show()
         self.load_db_subjects()
+
+    # Func for edit database table Students
+    def students_win(self):
+        self.ui.widget_roster.hide()
+        self.ui.widget_students.show()
+        self.load_db_students()
 
     # Func for setup all buttons
     def setup_buttons_funcs(self):
@@ -333,7 +346,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Удалить выбранную запись"')
                 else:
                     _db = ARMDataBase()
-                    _sql = "DELETE FROM teachers WHERE id_teach={0}".format(teachers_selected)
+                    _sql = "DELETE FROM teachers WHERE id_teacher={0}".format(teachers_selected)
                     _db.query(_sql)
                     self.load_db_teachers()
 
@@ -480,6 +493,96 @@ class MainWindow(QtWidgets.QMainWindow):
                     _db.query(_sql)
                     self.load_db_subjects()
 
+        def students_control_db(type_post):
+            students_list = self.stud_ui.sAWContent_stud_list.children()
+            _set_doc_warning = 1
+            students_selected = ''
+            if type_post == 'save':
+                for i in students_list:
+                    if i.objectName() == 'vL_sAWContent_stud_list':
+                        pass
+                    else:
+                        if i.isChecked():
+                            students_selected = i.objectName().split('_')[-1]
+                            _set_doc_warning = 0
+                            break
+                        else:
+                            _set_doc_warning = 1
+                if _set_doc_warning:
+                    set_doc_warning("Ошибка (не выбрана запись для изменения)",
+                                    'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
+                                    'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
+                                    '"Сохранить в выбранную запись"')
+                else:
+                    gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
+                    _db = ARMDataBase()
+                    _sql = "UPDATE students SET " \
+                           "student_name = '{0}', " \
+                           "student_birthday = '{1}', " \
+                           "student_phone = '{2}', " \
+                           "student_gender = '{3}', " \
+                           "student_city = '{4}', " \
+                           "student_einst = '{5}', " \
+                           "student_mail = '{6}', " \
+                           "student_web = '{7}' " \
+                           "WHERE id_student = '{8}'".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
+                                                             self.stud_ui.dateEdit_stud_birthday.date().toString(
+                                                                 'dd.MM.yyyy'),
+                                                             self.stud_ui.lineEdit_stud_phone.text(),
+                                                             gender,
+                                                             self.stud_ui.lineEdit_stud_city.text(),
+                                                             self.stud_ui.lineEdit_stud_einst.text(),
+                                                             self.stud_ui.lineEdit_stud_mail.text(),
+                                                             self.stud_ui.lineEdit_stud_web.text(),
+                                                             students_selected)
+                    _db.query(_sql)
+                    self.load_db_students()
+            elif type_post == 'add':
+                gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
+                _db = ARMDataBase()
+                _sql = "INSERT INTO students VALUES(" \
+                       "NULL," \
+                       "'{0}'," \
+                       "NULL," \
+                       "'{1}'," \
+                       "'{2}'," \
+                       "'{3}'," \
+                       "'{4}'," \
+                       "'{5}'," \
+                       "'{6}'," \
+                       "'{7}')".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
+                                      self.stud_ui.dateEdit_stud_birthday.date().toString(
+                                          'dd.MM.yyyy'),
+                                      self.stud_ui.lineEdit_stud_phone.text(),
+                                      gender,
+                                      self.stud_ui.lineEdit_stud_city.text(),
+                                      self.stud_ui.lineEdit_stud_einst.text(),
+                                      self.stud_ui.lineEdit_stud_mail.text(),
+                                      self.stud_ui.lineEdit_stud_web.text())
+                _db.query(_sql)
+                self.load_db_students()
+            elif type_post == "del":
+                for i in students_list:
+                    if i.objectName() == 'vL_sAWContent_stud_list':
+                        pass
+                    else:
+                        if i.isChecked():
+                            students_selected = i.objectName().split('_')[-1]
+                            _set_doc_warning = 0
+                            break
+                        else:
+                            _set_doc_warning = 1
+                if _set_doc_warning:
+                    set_doc_warning("Ошибка (не выбрана запись для удаления)",
+                                    'Сначала выберите запись для удаления.\n\nНажмите на нужную запись, '
+                                    'чтобы выбрать ее, а потом нажмите на кнопку '
+                                    '"Удалить выбранную запись"')
+                else:
+                    _db = ARMDataBase()
+                    _sql = "DELETE FROM students WHERE id_student={0}".format(students_selected)
+                    _db.query(_sql)
+                    self.load_db_students()
+
         def headers_back():
             self.ui.widget_headers.hide()
             self.ui.widget_roster.show()
@@ -500,6 +603,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.widget_subjects.hide()
             self.ui.widget_roster.show()
 
+        def students_back():
+            self.ui.widget_students.hide()
+            self.ui.widget_roster.show()
+
         # Setup buts
         self.ui.pushButton_print_notes.clicked.connect(lambda: notes_checked())
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_checked())
@@ -509,6 +616,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_teachers_roster.clicked.connect(lambda: self.teachers_win())
         self.ui.pushButton_groups_roster.clicked.connect(lambda: self.groups_win())
         self.ui.pushButton_subjects_roster.clicked.connect(lambda: self.subjects_win())
+        self.ui.pushButton_students_roster.clicked.connect(lambda: self.students_win())
 
         self.head_ui.pushButton_headers_add.clicked.connect(lambda: headers_control_db('add'))
         self.head_ui.pushButton_headers_save.clicked.connect(lambda: headers_control_db('save'))
@@ -543,7 +651,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sub_ui.pushButton_sub_delete.clicked.connect(lambda: subjects_control_db('del'))
         self.sub_ui.pushButton_sub_back.clicked.connect(lambda: subjects_back())
         self.sub_ui.lineEdit_search_sub.textEdited.connect(
-            lambda: self.load_db_groups(self.sub_ui.lineEdit_search_sub.text()))
+            lambda: self.load_db_subjects(self.sub_ui.lineEdit_search_sub.text()))
+
+        self.stud_ui.pushButton_stud_add.clicked.connect(lambda: students_control_db('add'))
+        self.stud_ui.pushButton_stud_save.clicked.connect(lambda: students_control_db('save'))
+        self.stud_ui.pushButton_stud_delete.clicked.connect(lambda: students_control_db('del'))
+        self.stud_ui.pushButton_stud_back.clicked.connect(lambda: students_back())
+        self.stud_ui.lineEdit_search_stud.textEdited.connect(
+            lambda: self.load_db_students(self.stud_ui.lineEdit_search_stud.text()))
 
     def clear_for_start(self):
         self.ui.widget_headers.hide()
@@ -551,6 +666,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_teachers.hide()
         self.ui.widget_groups.hide()
         self.ui.widget_subjects.hide()
+        self.ui.widget_students.hide()
 
     def load_for_start(self):
         notes_list = os.listdir(os.path.abspath(os.curdir) + r'/Документы/Записки/')
@@ -616,17 +732,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.head_ui.textEdit_headers_fullname.setText(_head[0][1])
             self.head_ui.textEdit_headers_prof.setText(_head[0][5])
 
-            if _head[0][2] is not None or _head[0][2] != '':
+            if _head[0][2] is not None and _head[0][2] != '':
                 self.head_ui.textEdit_headers_phone.setText(_head[0][2])
             else:
                 self.head_ui.textEdit_headers_phone.setText('')
 
-            if _head[0][3] is not None or _head[0][3] != '':
+            if _head[0][3] is not None and _head[0][3] != '':
                 self.head_ui.textEdit_headers_mail.setText(_head[0][3])
             else:
                 self.head_ui.textEdit_headers_mail.setText('')
 
-            if _head[0][4] is not None or _head[0][4] != '':
+            if _head[0][4] is not None and _head[0][4] != '':
                 self.head_ui.textEdit_headers_web.setText(_head[0][4])
             else:
                 self.head_ui.textEdit_headers_web.setText('')
@@ -642,10 +758,10 @@ class MainWindow(QtWidgets.QMainWindow):
             head_loader.append(str(heads[0])[:])
             heads[0] = 'clb_head_' + str(heads[0])
             heads[1] = 'ФИО: ' + heads[1] + '\n'
-            heads[2] = 'Телефоны: ' + heads[2] + '\n' if heads[2] is not None or heads[2] != '' else ''
-            heads[3] = 'Электронные почты: ' + heads[3] + '\n' if heads[3] is not None or heads[3] != '' else ''
-            heads[4] = 'Социальные сети: ' + heads[4] + '\n' if heads[4] is not None or heads[4] != '' else ''
-            heads[5] = 'Должность: ' + heads[5] + '\n' if heads[5] is not None or heads[5] != '' else ''
+            heads[2] = 'Телефоны: ' + heads[2] + '\n' if heads[2] is not None and heads[2] != '' else ''
+            heads[3] = 'Электронные почты: ' + heads[3] + '\n' if heads[3] is not None and heads[3] != '' else ''
+            heads[4] = 'Социальные сети: ' + heads[4] + '\n' if heads[4] is not None and heads[4] != '' else ''
+            heads[5] = 'Должность: ' + heads[5] + '\n' if heads[5] is not None and heads[5] != '' else ''
             searcher = ''
             _search_text = search_text
             for h in heads:
@@ -685,7 +801,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.prog_ui.textEdit_prog_name.setText(_prog[0][1])
             self.prog_ui.textEdit_prog_range.setText(_prog[0][2])
 
-            if _prog[0][2] is not None or _prog[0][2] != '':
+            if _prog[0][2] is not None and _prog[0][2] != '':
                 self.head_ui.textEdit_headers_phone.setText(_prog[0][2])
             else:
                 self.head_ui.textEdit_headers_phone.setText('')
@@ -701,7 +817,7 @@ class MainWindow(QtWidgets.QMainWindow):
             prog_loader.append(str(progs[0])[:])
             progs[0] = 'clb_prog_' + str(progs[0])
             progs[1] = 'Программа: ' + progs[1] + '\n'
-            progs[2] = 'Продолжительность: в течении ' + progs[2] + '-х месяцев\n' if progs[2] is not None or progs[
+            progs[2] = 'Продолжительность: в течении ' + progs[2] + '-х месяцев\n' if progs[2] is not None and progs[
                 2] != '' else ''
             searcher = ''
             _search_text = search_text
@@ -742,17 +858,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.teach_ui.textEdit_teachers_fullname.setText(_teach[0][1])
             self.teach_ui.textEdit_teachers_prof.setText(_teach[0][5])
 
-            if _teach[0][2] is not None or _teach[0][2] != '':
+            if _teach[0][2] is not None and _teach[0][2] != '':
                 self.teach_ui.textEdit_teachers_phone.setText(_teach[0][2])
             else:
                 self.teach_ui.textEdit_teachers_phone.setText('')
 
-            if _teach[0][3] is not None or _teach[0][3] != '':
+            if _teach[0][3] is not None and _teach[0][3] != '':
                 self.teach_ui.textEdit_teachers_mail.setText(_teach[0][3])
             else:
                 self.teach_ui.textEdit_teachers_mail.setText('')
 
-            if _teach[0][4] is not None or _teach[0][4] != '':
+            if _teach[0][4] is not None and _teach[0][4] != '':
                 self.teach_ui.textEdit_teachers_web.setText(_teach[0][4])
             else:
                 self.teach_ui.textEdit_teachers_web.setText('')
@@ -768,10 +884,10 @@ class MainWindow(QtWidgets.QMainWindow):
             teach_loader.append(str(teachs[0])[:])
             teachs[0] = 'clb_teach_' + str(teachs[0])
             teachs[1] = 'ФИО: ' + teachs[1] + '\n'
-            teachs[2] = 'Телефоны: ' + teachs[2] + '\n' if teachs[2] is not None or teachs[2] != '' else ''
-            teachs[3] = 'Электронные почты: ' + teachs[3] + '\n' if teachs[3] is not None or teachs[3] != '' else ''
-            teachs[4] = 'Социальные сети: ' + teachs[4] + '\n' if teachs[4] is not None or teachs[4] != '' else ''
-            teachs[5] = 'Должность: ' + teachs[5] + '\n' if teachs[5] is not None or teachs[5] != '' else ''
+            teachs[2] = 'Телефоны: ' + teachs[2] + '\n' if teachs[2] is not None and teachs[2] != '' else ''
+            teachs[3] = 'Электронные почты: ' + teachs[3] + '\n' if teachs[3] is not None and teachs[3] != '' else ''
+            teachs[4] = 'Социальные сети: ' + teachs[4] + '\n' if teachs[4] is not None and teachs[4] != '' else ''
+            teachs[5] = 'Должность: ' + teachs[5] + '\n' if teachs[5] is not None and teachs[5] != '' else ''
             searcher = ''
             _search_text = search_text
             for h in teachs:
@@ -811,7 +927,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.groups_ui.textEdit_groups_name.setText(_grp[0][2])
             self.groups_ui.comboBox_groups_prog.setCurrentIndex(
                 self.groups_ui.comboBox_groups_prog.findData(_grp[0][3]))
-            if _grp[0][2] is not None or _grp[0][2] != '':
+            if _grp[0][2] is not None and _grp[0][2] != '':
                 self.groups_ui.textEdit_groups_class.setText(_grp[0][1])
             else:
                 self.groups_ui.textEdit_groups_class.setText('')
@@ -831,9 +947,9 @@ class MainWindow(QtWidgets.QMainWindow):
             group_prog = _db.query(_sql)
 
             grps[0] = 'clb_grp_' + str(grps[0])
-            grps[1] = 'Класс: ' + grps[1] + '\n' if grps[1] is not None or grps[1] != '' else ''
+            grps[1] = 'Класс: ' + grps[1] + '\n' if grps[1] is not None and grps[1] != '' else ''
             grps[2] = 'Группа: ' + grps[2] + '\n'
-            grps[3] = 'Программа: ' + group_prog[0][0] + '\n' if group_prog[0][0] is not None or group_prog[0][
+            grps[3] = 'Программа: ' + group_prog[0][0] + '\n' if group_prog[0][0] is not None and group_prog[0][
                 0] != '' else ''
             searcher = ''
             _search_text = search_text
@@ -909,14 +1025,14 @@ class MainWindow(QtWidgets.QMainWindow):
             sub_prog = _db.query(_sql)
 
             subs[0] = 'clb_sub_' + str(subs[0])
-            subs[1] = 'Название: ' + subs[1] + '\n' if subs[1] is not None or subs[1] != '' else ''
-            subs[2] = 'Такса: ' + subs[2] + '\n' if subs[2] is not None or subs[2] != '' else ''
-            subs[3] = 'Преподаватель: ' + sub_teach[0][0] + '\n' if sub_teach[0][0] is not None or sub_teach[0][
+            subs[1] = 'Название: ' + subs[1] + '\n' if subs[1] is not None and subs[1] != '' else ''
+            subs[2] = 'Такса: ' + subs[2] + '\n' if subs[2] is not None and subs[2] != '' else ''
+            subs[3] = 'Преподаватель: ' + sub_teach[0][0] + '\n' if sub_teach[0][0] is not None and sub_teach[0][
                 0] != '' else ''
-            subs[4] = 'Стоимость: ' + subs[4] + '\n' if subs[4] is not None or subs[4] != '' else ''
-            subs[5] = 'Программа: ' + sub_prog[0][0] + '\n' if sub_prog[0][0] is not None or sub_prog[0][
+            subs[4] = 'Стоимость: ' + subs[4] + '\n' if subs[4] is not None and subs[4] != '' else ''
+            subs[5] = 'Программа: ' + sub_prog[0][0] + '\n' if sub_prog[0][0] is not None and sub_prog[0][
                 0] != '' else ''
-            subs[7] = 'Часы: ' + subs[7] + '\n' if subs[7] is not None or subs[7] != '' else ''
+            subs[7] = 'Часы: ' + subs[7] + '\n' if subs[7] is not None and subs[7] != '' else ''
             searcher = ''
             _search_text = search_text
             for h in subs:
@@ -950,6 +1066,89 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sub_ui.comboBox_sub_teach.clear()
         for teach in teachers:
             self.create_combo_box_el(self.sub_ui.comboBox_sub_teach, teach[0], str(teach[1]))
+
+    # Loader database for subjects
+    def load_db_students(self, search_text=None):
+        clear_list(self.stud_ui.sAWContent_stud_list.children())
+
+        def loader_stud_edits():
+            selected_students = ''
+            students_list = self.stud_ui.sAWContent_stud_list.children()
+            if len(students_list) != 2:
+                for stud in students_list:
+                    if stud.objectName() != 'vL_sAWContent_stud_list':
+                        if stud.isChecked():
+                            selected_students = stud.objectName().split('_')[-1]
+                            break
+            else:
+                selected_students = self.stud_ui.sAWContent_stud_list.children()[-1].objectName().split('_')[-1]
+            _db1 = ARMDataBase()
+            _sql1 = "SELECT * FROM students WHERE id_student=" + selected_students
+            _stud = _db1.query(_sql1)
+
+            self.stud_ui.textEdit_stud_fullname.setText(_stud[0][1])
+            self.stud_ui.dateEdit_stud_birthday.setDate(datetime.date(int(_stud[0][3].split('.')[2]),
+                                                                      int(_stud[0][3].split('.')[1]),
+                                                                      int(_stud[0][3].split('.')[0])))
+            self.stud_ui.lineEdit_stud_phone.setText(_stud[0][4])
+            if _stud[0][5] == 'male':
+                self.stud_ui.radioButton_stud_gender_male.setChecked(1)
+                self.stud_ui.radioButton_stud_gender_female.setChecked(0)
+            else:
+                self.stud_ui.radioButton_stud_gender_female.setChecked(1)
+                self.stud_ui.radioButton_stud_gender_male.setChecked(0)
+            self.stud_ui.lineEdit_stud_city.setText(_stud[0][6])
+            self.stud_ui.lineEdit_stud_einst.setText(_stud[0][7])
+            self.stud_ui.lineEdit_stud_mail.setText(_stud[0][8])
+            self.stud_ui.lineEdit_stud_web.setText(_stud[0][9])
+
+        _db = ARMDataBase()
+        _sql = "SELECT * FROM students"
+        students = _db.query(_sql)
+        stud_loader = []
+        for i in range(len(students)):
+            studs = []
+            for h in students[i]:
+                studs.append(h)
+            stud_loader.append(str(studs[0])[:])
+
+            if studs[2] is not None and studs[2] != '':
+                _db = ARMDataBase()
+                _sql = "SELECT group_name FROM groups WHERE id_group=" + str(studs[2])
+                stud_group = _db.query(_sql)
+            else:
+                stud_group = [['']]
+
+            studs[0] = 'clb_stud_' + str(studs[0])
+            studs[1] = 'ФИО: ' + studs[1] + '\n' if studs[1] is not None and studs[1] != '' else ''
+            studs[2] = 'Группа: ' + stud_group[0][0] + '\n' if stud_group[0][0] is not None and stud_group[0][
+                0] != '' else ''
+            studs[3] = 'День рождения: ' + studs[3] + '\n' if studs[3] is not None and studs[3] != '' else ''
+            studs[4] = 'Телефон: ' + studs[4] + '\n' if studs[4] is not None and studs[4] != '' else ''
+            studs[5] = 'Пол: ' + studs[5] + '\n' if studs[5] is not None and studs[5] != '' else ''
+            studs[6] = 'Место проживания: ' + studs[6] + '\n' if studs[6] is not None and studs[6] != '' else ''
+            studs[7] = 'Место обучения: ' + studs[7] + '\n' if studs[7] is not None and studs[7] != '' else ''
+            studs[8] = 'Электронная почта: ' + studs[8] + '\n' if studs[8] is not None and studs[8] != '' else ''
+            studs[9] = 'Социальные сети: ' + studs[9] + '\n' if studs[9] is not None and studs[9] != '' else ''
+            searcher = ''
+            _search_text = search_text
+            for h in studs:
+                if h is not None and h != '':
+                    searcher = searcher + h.lower()
+            if _search_text is not None and _search_text != '':
+                _search_text = search_text.lower()
+                if _search_text in searcher:
+                    stud_but = self.create_list_el(studs[0],
+                                                   studs[1] + studs[2] + studs[3] + studs[4] + studs[5] + studs[6] +
+                                                   studs[7] + studs[8] + studs[9],
+                                                   self.stud_ui.sAWContent_stud_list)
+                    stud_but.clicked.connect(lambda: loader_stud_edits())
+            else:
+                stud_but = self.create_list_el(studs[0],
+                                               studs[1] + studs[2] + studs[3] + studs[4] + studs[5] + studs[6] + studs[
+                                                   7] + studs[8] + studs[9],
+                                               self.stud_ui.sAWContent_stud_list)
+                stud_but.clicked.connect(lambda: loader_stud_edits())
 
 
 # Clearing edit list

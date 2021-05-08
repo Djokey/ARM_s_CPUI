@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Students</class>
+ <widget class="QWidget" name="Students">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>971</width>
+    <height>588</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Обучающиеся</string>
+  </property>
+  <layout class="QHBoxLayout" name="hL_Students" stretch="1,2">
+   <item>
+    <widget class="QWidget" name="widget_stud_input_box" native="true">
+     <layout class="QVBoxLayout" name="vL_widget_stud_input_box">
+      <item>
+       <widget class="QWidget" name="widget_stud_edit_buts" native="true">
+        <layout class="QHBoxLayout" name="hL_widget_stud_edit_buts">
+         <item>
+          <widget class="QPushButton" name="pushButton_stud_add">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Добавить новую запись</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_stud_save">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Сохранить в выбранную запись</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_fullname">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>ФИО обучающегося</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="textEdit_stud_fullname"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_birthday">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>День рождения</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDateEdit" name="dateEdit_stud_birthday">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="date">
+         <date>
+          <year>2000</year>
+          <month>1</month>
+          <day>1</day>
+         </date>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_phone">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Телефон (не обязательно)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineEdit_stud_phone"/>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_stud_gender">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="title">
+         <string>Пол</string>
+        </property>
+        <layout class="QHBoxLayout" name="hL_groupBox_stud_gender">
+         <item>
+          <widget class="QRadioButton" name="radioButton_stud_gender_male">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Мужской</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_stud_gender_female">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Женский</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_city">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Место проживания (не обязательно)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineEdit_stud_city"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_einst">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Место обучения (не обязательно)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineEdit_stud_einst"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_mail">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Электронная почта (не обязательно)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineEdit_stud_mail"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_web">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Социальные сети (не обязательно)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineEdit_stud_web"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_stud_back">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Назад</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget_stud_list_box" native="true">
+     <layout class="QVBoxLayout" name="vL_widget_stud_list_box">
+      <item>
+       <widget class="QWidget" name="widget_left_up_stud" native="true">
+        <layout class="QHBoxLayout" name="hL_widget_left_up_sub">
+         <item>
+          <widget class="QLabel" name="label_search_stud">
+           <property name="text">
+            <string>Поиск:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_search_stud"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_stud_delete">
+           <property name="text">
+            <string>Удалить выбранную запись</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QScrollArea" name="scrollArea_stud_list">
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="sAWContent_stud_list">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>539</width>
+           <height>503</height>
+          </rect>
+         </property>
+         <layout class="QVBoxLayout" name="vL_sAWContent_stud_list"/>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
