@@ -76,6 +76,12 @@
       </item>
       <item>
        <widget class="QComboBox" name="comboBox_groups_numprog">
+        <property name="editable">
+         <bool>false</bool>
+        </property>
+        <property name="currentIndex">
+         <number>-1</number>
+        </property>
         <property name="placeholderText">
          <string/>
         </property>
@@ -95,7 +101,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QTextEdit" name="textEdit"/>
+       <widget class="QTextEdit" name="textEdit_groups_class"/>
       </item>
       <item>
        <widget class="QPushButton" name="pushButton_groups_back">
