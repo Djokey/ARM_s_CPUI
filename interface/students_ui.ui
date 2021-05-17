@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>971</width>
-    <height>588</height>
+    <height>678</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,6 +61,21 @@
       </item>
       <item>
        <widget class="QTextEdit" name="textEdit_stud_fullname"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_stud_group">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Группа</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboBox_stud_group"/>
       </item>
       <item>
        <widget class="QLabel" name="label_stud_birthday">
@@ -226,7 +241,7 @@
      <layout class="QVBoxLayout" name="vL_widget_stud_list_box">
       <item>
        <widget class="QWidget" name="widget_left_up_stud" native="true">
-        <layout class="QHBoxLayout" name="hL_widget_left_up_sub">
+        <layout class="QHBoxLayout" name="hL_widget_left_up_stud">
          <item>
           <widget class="QLabel" name="label_search_stud">
            <property name="text">
@@ -258,7 +273,7 @@
            <x>0</x>
            <y>0</y>
            <width>539</width>
-           <height>503</height>
+           <height>593</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="vL_sAWContent_stud_list"/>
