@@ -57,6 +57,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.hL_widget_roster_editors.addWidget(self.ui.widget_enrollment)
         self.enr_ui = Ui_Enrollment()
         self.enr_ui.setupUi(self.ui.widget_enrollment)
+        self.enr_ui.list_cb_checked = []
+        self.enr_ui.list_cb_check = []
 
         self.clear_for_start()
         self.setup_buttons_funcs()
@@ -618,6 +620,69 @@ class MainWindow(QtWidgets.QMainWindow):
                     _db.close()
                     self.load_db_students()
 
+        def enrollment_control_db():
+            _db = ARMDataBase()
+            enrollments_list = self.enr_ui.sAWContent_enr_list.children()
+            _set_doc_warning = 1
+            enrollment_selected = ''
+            for i in enrollments_list:
+                if i.objectName() == 'vL_sAWContent_enr_list':
+                    pass
+                else:
+                    if i.isChecked():
+                        enrollment_selected = i.objectName().split('_')[-1]
+                        _set_doc_warning = 0
+                        break
+                    else:
+                        _set_doc_warning = 1
+            if _set_doc_warning:
+                set_doc_warning("Ошибка (не выбрана запись для изменения)",
+                                'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
+                                'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
+                                '"Сохранить в выбранную запись"')
+            else:
+                for enrollment in self.enr_ui.list_cb_checked:
+                    _sql = "SELECT id_sis FROM subs_in_studs WHERE id_student=" + enrollment_selected + " AND id_sub=" + \
+                           enrollment[0]
+                    check_sis = _db.query(_sql)
+                    if check_sis != []:
+                        _sql = "UPDATE subs_in_studs SET " \
+                               "student_numcontract = '{0}', " \
+                               "student_datecontract = '{1}', " \
+                               "status = '{2}' " \
+                               "WHERE id_sis = '{3}'". \
+                            format(self.enr_ui.groupBox_sis_contracts.findChild(QtWidgets.QGroupBox,
+                                                                                "grB_" + enrollment[0]).
+                                   findChild(QtWidgets.QLineEdit, "ledit_" + "grB_" + enrollment[0]).text(),
+                                   self.enr_ui.groupBox_sis_contracts.findChild(QtWidgets.QGroupBox,
+                                                                                "grB_" + enrollment[0]).
+                                   findChild(QtWidgets.QDateEdit, "dedit_" + "grB_" + enrollment[0]).date().
+                                   toString('dd.MM.yyyy'),
+                                   "1" if enrollment[1] else "0",
+                                   check_sis[0][0])
+                    else:
+                        if enrollment[1]:
+                            _sql = "INSERT INTO subs_in_studs VALUES(" \
+                                   "NULL, " \
+                                   "'{0}', " \
+                                   "'{1}', " \
+                                   "'{2}', " \
+                                   "'{3}', " \
+                                   "'{4}')".format(enrollment_selected,
+                                                   enrollment[0],
+                                                   self.enr_ui.groupBox_sis_contracts.findChild(QtWidgets.QGroupBox,
+                                                                                                "grB_" + enrollment[0]).
+                                                   findChild(QtWidgets.QLineEdit,
+                                                             "ledit_" + "grB_" + enrollment[0]).text(),
+                                                   self.enr_ui.groupBox_sis_contracts.findChild(QtWidgets.QGroupBox,
+                                                                                                "grB_" + enrollment[0]).
+                                                   findChild(QtWidgets.QDateEdit, "dedit_" + "grB_" + enrollment[0]).
+                                                   date().toString('dd.MM.yyyy'),
+                                                   "1" if enrollment[1] else "0")
+                    _db.query(_sql)
+                _db.close()
+                self.load_db_enrollment()
+
         def headers_back():
             self.ui.widget_headers.hide()
             self.ui.widget_roster.show()
@@ -700,12 +765,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stud_ui.lineEdit_search_stud.textEdited.connect(
             lambda: self.load_db_students(self.stud_ui.lineEdit_search_stud.text()))
 
-        # self.stud_ui.pushButton_stud_add.clicked.connect(lambda: students_control_db('add'))
-        # self.stud_ui.pushButton_stud_save.clicked.connect(lambda: students_control_db('save'))
-        # self.stud_ui.pushButton_stud_delete.clicked.connect(lambda: students_control_db('del'))
+        self.enr_ui.pushButton_enr_save.clicked.connect(lambda: enrollment_control_db())
         self.enr_ui.pushButton_enr_back.clicked.connect(lambda: enrollment_back())
-        # self.stud_ui.lineEdit_search_stud.textEdited.connect(
-        #     lambda: self.load_db_students(self.stud_ui.lineEdit_search_stud.text()))
+        self.enr_ui.lineEdit_search_enr.textEdited.connect(
+            lambda: self.load_db_enrollment(self.enr_ui.lineEdit_search_enr.text()))
 
     # END BUTTONS
 
@@ -762,16 +825,61 @@ class MainWindow(QtWidgets.QMainWindow):
         ls.addItem(text, index)
         return ls
 
-    def create_check_box_el(self, ls, name, text):
+    def create_check_box_el(self, ls, name, text, checked=False):
         cb = QtWidgets.QCheckBox(ls)
         font = QtGui.QFont()
         font.setPointSize(11)
         cb.setFont(font)
         cb.setObjectName(name)
+        cb.setChecked(checked)
         ls_Layout = ls.children()[0]
         ls_Layout.addWidget(cb)
         cb.setText(self._translate("MainWindow", text))
-        return ls
+        return cb
+
+    def create_sub_groupbox(self, ls, name, text, _hide):
+        # GroupBox for Subject
+        gb = QtWidgets.QGroupBox(ls)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        gb.setFont(font)
+        gb.setObjectName(name)
+        gL_gb = QtWidgets.QGridLayout(gb)
+        gL_gb.setObjectName("gL_" + name)
+        gb.setTitle(self._translate("Enrollment", text))
+        ls_Layout = ls.children()[0]
+        ls_Layout.addWidget(gb)
+        # Label for Num Contract
+        lb_num = QtWidgets.QLabel(gb)
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        lb_num.setFont(font)
+        lb_num.setObjectName("lb_num_" + name)
+        lb_num.setText(self._translate("Enrollment", "Номер контракта"))
+        gL_gb.addWidget(lb_num, 0, 0)
+        # LineEdit for Num Contract
+        ledit = QtWidgets.QLineEdit(gb)
+        ledit.setObjectName("ledit_" + name)
+        gL_gb.addWidget(ledit, 0, 1)
+        # Label for Date
+        lb_date = QtWidgets.QLabel(gb)
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        lb_date.setFont(font)
+        lb_date.setObjectName("lb_date_" + name)
+        lb_date.setText(self._translate("Enrollment", "Дата заключения контракта"))
+        gL_gb.addWidget(lb_date, 1, 0)
+        # DateEdit for Date
+        dedit = QtWidgets.QDateEdit(gb)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        dedit.setFont(font)
+        dedit.setDate(QtCore.QDate(2000, 1, 1))
+        dedit.setObjectName("dedit_" + name)
+        gL_gb.addWidget(dedit, 1, 1)
+        if _hide:
+            gb.hide()
+        return gb
 
     # Loader database for header
     def load_db_headers(self, search_text=None):
@@ -1180,6 +1288,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.stud_ui.lineEdit_stud_einst.setText(_stud[0][7])
             self.stud_ui.lineEdit_stud_mail.setText(_stud[0][8])
             self.stud_ui.lineEdit_stud_web.setText(_stud[0][9])
+            self.stud_ui.comboBox_stud_group.setCurrentIndex(
+                self.stud_ui.comboBox_stud_group.findData(_stud[0][2]))
 
         _db = ARMDataBase()
         _sql = "SELECT * FROM students"
@@ -1245,8 +1355,31 @@ class MainWindow(QtWidgets.QMainWindow):
     def load_db_enrollment(self, search_text=None):
         clear_list(self.enr_ui.sAWContent_enr_list.children())
 
+        def check_box_clicked():
+            self.enr_ui.list_cb_check = []
+            for check in self.enr_ui.groupBox_stud_subs.children():
+                if "el_" in check.objectName():
+                    self.enr_ui.list_cb_check.append([check.objectName().split('_')[-1], check.isChecked()])
+            for o in range(len(self.enr_ui.list_cb_check)):
+                if self.enr_ui.list_cb_check[o][1] is not self.enr_ui.list_cb_checked[o][1]:
+                    for check in self.enr_ui.groupBox_stud_subs.children():
+                        if "el_" + self.enr_ui.list_cb_check[o][0] in check.objectName():
+                            if check.isChecked():
+                                for child in self.enr_ui.groupBox_sis_contracts.children():
+                                    if "grB_" in child.objectName() and \
+                                            self.enr_ui.list_cb_check[o][0] in child.objectName():
+                                        child.show()
+                                        self.enr_ui.list_cb_checked[o][1] = True
+                            else:
+                                for child in self.enr_ui.groupBox_sis_contracts.children():
+                                    if "grB_" in child.objectName() and \
+                                            self.enr_ui.list_cb_check[o][0] in child.objectName():
+                                        child.hide()
+                                        self.enr_ui.list_cb_checked[o][1] = False
+
         def loader_enr_edits():
             clear_group_box(self.enr_ui.groupBox_stud_subs.children())
+            clear_group_box(self.enr_ui.groupBox_sis_contracts.children())
             selected_enrollment = ''
             enrollment_list = self.enr_ui.sAWContent_enr_list.children()
             if len(enrollment_list) != 2:
@@ -1258,28 +1391,42 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 selected_enrollment = self.enr_ui.sAWContent_enr_list.children()[-1].objectName().split('_')[-1]
             _db1 = ARMDataBase()
-            _sql1 = "SELECT * FROM students WHERE id_student=" + selected_enrollment
-            _enr = _db1.query(_sql1)
+            _sql3 = "SELECT id_sub, status FROM subs_in_studs WHERE id_student=" + selected_enrollment
+            list_active_subs = _db1.query(_sql3)
+            _sql3 = "SELECT id_group FROM students WHERE id_student=" + selected_enrollment
+            id_group_stud = _db1.query(_sql3)
+            _sql3 = "SELECT id_prog FROM groups WHERE id_group=" + str(id_group_stud[0][0])
+            id_prog_stud = _db1.query(_sql3)
+            _sql3 = "SELECT id_sub, sub_name FROM subjects WHERE id_prog=" + str(id_prog_stud[0][0])
+            list_subs = _db1.query(_sql3)
+            _list_active_subs = []
+            self.enr_ui.list_cb_checked = []
+            for sub in range(len(list_active_subs)):
+                if list_active_subs[sub][1] == "1":
+                    _list_active_subs.append(str(list_active_subs[sub][0])[:])
+            for l in range(len(list_subs)):
+                _sql2 = "SELECT student_numcontract, student_datecontract, status FROM subs_in_studs WHERE id_sub=" + \
+                        str(list_subs[l][0]) + " AND id_student=" + selected_enrollment
+                contracts1 = _db1.query(_sql2)
+                cb = self.create_check_box_el(self.enr_ui.groupBox_stud_subs, 'el_' + str(list_subs[l][0]),
+                                              list_subs[l][1],
+                                              True if str(list_subs[l][0]) in _list_active_subs else False)
+                self.enr_ui.list_cb_checked.append(
+                    [str(list_subs[l][0]), True if str(list_subs[l][0]) in _list_active_subs else False])
+                cb.clicked.connect(lambda: check_box_clicked())
+                gb = self.create_sub_groupbox(self.enr_ui.groupBox_sis_contracts,
+                                              "grB_" + str(list_subs[l][0]),
+                                              list_subs[l][1],
+                                              False if str(list_subs[l][0]) in _list_active_subs else True)
+                for chield in gb.children():
+                    if "gL_" not in chield.objectName() and contracts1 != []:
+                        if "ledit_grB_" in chield.objectName():
+                            chield.setText(contracts1[0][0])
+                        elif "dedit_grB_" in chield.objectName():
+                            chield.setDate(datetime.date(int(contracts1[0][1].split('.')[2]),
+                                                         int(contracts1[0][1].split('.')[1]),
+                                                         int(contracts1[0][1].split('.')[0])))
             _db1.close()
-
-            # for
-            #     self.create_check_box_el(self.enr_ui.groupBox_stud_subs, 'el_asdasdasddsa', 'Matan')
-
-            # self.enr_ui.textEdit_enr_fullname.setText(_enr[0][1])
-            # self.enr_ui.dateEdit_enr_birthday.setDate(datetime.date(int(_enr[0][3].split('.')[2]),
-            #                                                           int(_enr[0][3].split('.')[1]),
-            #                                                           int(_enr[0][3].split('.')[0])))
-            # self.enr_ui.lineEdit_enr_phone.setText(_enr[0][4])
-            # if _enr[0][5] == 'male':
-            #     self.enr_ui.radioButton_enr_gender_male.setChecked(1)
-            #     self.enr_ui.radioButton_enr_gender_female.setChecked(0)
-            # else:
-            #     self.enr_ui.radioButton_enr_gender_female.setChecked(1)
-            #     self.enr_ui.radioButton_enr_gender_male.setChecked(0)
-            # self.enr_ui.lineEdit_enr_city.setText(_enr[0][6])
-            # self.enr_ui.lineEdit_enr_einst.setText(_enr[0][7])
-            # self.enr_ui.lineEdit_enr_mail.setText(_enr[0][8])
-            # self.enr_ui.lineEdit_enr_web.setText(_enr[0][9])
 
         _db = ARMDataBase()
         _sql = "SELECT * FROM students"
@@ -1300,7 +1447,7 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 stud_group = [['']]
 
-            if stud_group != [['']]:
+            if stud_group != [['']] and stud_group is not None:
                 _sql = "SELECT id_prog FROM groups WHERE id_group=" + str(studs[2])
                 stud_group_prog_id = _db.query(_sql)
                 _sql = "SELECT prog_name FROM programs WHERE id_prog=" + str(stud_group_prog_id[0][0])
@@ -1316,20 +1463,28 @@ class MainWindow(QtWidgets.QMainWindow):
             subjects = ''
             for s in range(len(stud_subs)):
                 _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(stud_subs[s][0])
+                _sql1 = "SELECT student_numcontract, student_datecontract, status FROM subs_in_studs WHERE id_sub=" + str(
+                    stud_subs[s][0]) + " AND id_student=" + str(studs[0])
+                contracts = _db.query(_sql1)
                 if s > 0:
-                    subjects += ', ' + _db.query(_sql)[0][0]
+                    if contracts[0][2] == "1":
+                        subjects += ', ' + _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0], contracts[0][1])
                 else:
-                    subjects += _db.query(_sql)[0][0]
+                    if contracts[0][2] == "1":
+                        subjects += _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0], contracts[0][1])
 
             studs[0] = 'clb_sis_' + str(studs[0])
             studs[1] = 'ФИО: ' + studs[1] + '\n' if studs[1] is not None and studs[1] != '' else ''
             studs[2] = 'Группа: ' + stud_group[0][0] + '\n' if stud_group[0][0] is not None and stud_group[0][
                 0] != '' else ''
-            studs[3] = 'Программа: ' + stud_group_prog_name[0][0] + '\n' if stud_group_prog_name[0][0] is not None and stud_group_prog_name[0][
-                0] != '' else ''
-            studs[4] = 'Продолжительность обучения: ' + stud_group_prog_range[0][0] + ' месяцев\n' if stud_group_prog_range[0][0] is not None and stud_group_prog_range[0][
-                0] != '' else ''
-            studs[5] = 'Предметы: ' + subjects + '\n' if subjects is not None and subjects != '' else 'Предметы: Отсутствуют\n'
+            studs[3] = 'Программа: ' + stud_group_prog_name[0][0] + '\n' if stud_group_prog_name[0][0] is not None and \
+                                                                            stud_group_prog_name[0][
+                                                                                0] != '' else ''
+            studs[4] = 'Продолжительность обучения: ' + stud_group_prog_range[0][0] + ' месяцев\n' if \
+                stud_group_prog_range[0][0] is not None and stud_group_prog_range[0][0] != '' else ''
+            studs[
+                5] = 'Предметы: ' + subjects + '\n' if subjects is not None and subjects != '' else 'Предметы: Отсутствуют\n'
+
             searcher = ''
             _search_text = search_text
             for h in studs:
@@ -1349,15 +1504,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 stud_but.clicked.connect(lambda: loader_enr_edits())
         _db.close()
 
-        # _db = ARMDataBase()
-        # _sql = "SELECT * FROM groups"
-        # groups = _db.query(_sql)
-        # _db.close()
-        # _groups = []
-        # self.enr_ui.comboBox_enr_group.clear()
-        # for group in groups:
-        #     self.create_combo_box_el(self.enr_ui.comboBox_enr_group, group[0], str(group[2]))
-
 
 # Clearing edit list
 def clear_list(children_list):
@@ -1370,7 +1516,7 @@ def clear_list(children_list):
 # Clearing edit groupBox
 def clear_group_box(group_box):
     for i in group_box:
-        if i.objectName().startswith('el_'):
+        if i.objectName().startswith('el_') or i.objectName().startswith('grB_'):
             i.setAttribute(55, 1)
             i.close()
 
