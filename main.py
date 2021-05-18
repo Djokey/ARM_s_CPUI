@@ -715,6 +715,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_print_notes.clicked.connect(lambda: notes_checked())
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_checked())
 
+        self.ui.pushButton_update_timetable.clicked.connect(lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
+        self.ui.lineEdit_search_timetable.textEdited.connect(
+            lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
+
         self.ui.pushButton_headers_roster.clicked.connect(lambda: self.headers_win())
         self.ui.pushButton_programs_roster.clicked.connect(lambda: self.programs_win())
         self.ui.pushButton_teachers_roster.clicked.connect(lambda: self.teachers_win())
@@ -795,6 +799,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Loading doc's for lists with doc's
         load_docx(notes_list, self.ui.sAWContent_notes, 'decree_')
         load_docx(decree_list, self.ui.sAWContent_decree, 'note_')
+        self.load_db_timetable()
         # Add normal icon
         self.ui.icon = QtGui.QIcon()
         self.ui.icon.addPixmap(QtGui.QPixmap("sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -991,7 +996,7 @@ class MainWindow(QtWidgets.QMainWindow):
             prog_loader.append(str(progs[0])[:])
             progs[0] = 'clb_prog_' + str(progs[0])
             progs[1] = 'Программа: ' + progs[1] + '\n'
-            progs[2] = 'Продолжительность: в течении ' + progs[2] + '-х месяцев\n' if progs[2] is not None and progs[
+            progs[2] = 'Продолжительность: в течении ' + progs[2] + ' месяцев\n' if progs[2] is not None and progs[
                 2] != '' else ''
             searcher = ''
             _search_text = search_text
@@ -1502,6 +1507,36 @@ class MainWindow(QtWidgets.QMainWindow):
                                                studs[1] + studs[2] + studs[3] + studs[4] + studs[5],
                                                self.enr_ui.sAWContent_enr_list)
                 stud_but.clicked.connect(lambda: loader_enr_edits())
+        _db.close()
+
+    # Loader database for Timetable list
+    def load_db_timetable(self, search_text=None):
+        clear_list(self.ui.sAWContent_timetable.children())
+        _db = ARMDataBase()
+        _sql = "SELECT id_sub, sub_name, id_teacher, id_prog, sub_hours FROM subjects"
+        timetable_info = _db.query(_sql)
+        for i in range(len(timetable_info)):
+            text = "Предмет: {}\n".format(timetable_info[i][1])
+            _sql = "SELECT prog_name, prog_range FROM programs WHERE id_prog=" + str(timetable_info[i][3])
+            prog_info = _db.query(_sql)
+            text += "Программа: {}\n".format(prog_info[0][0])
+            text += "Продолжительность программы: в течении {} месяцев\n".format(prog_info[0][1])
+            _sql = "SELECT teacher_name FROM teachers WHERE id_teacher=" + str(timetable_info[i][2])
+            teacher_info = _db.query(_sql)
+            text += "Преподаватель: {}\n".format(teacher_info[0][0])
+            text += "Часы: {}\n".format(timetable_info[i][4])
+            _search_text = search_text
+            searcher = text.lower()
+            if _search_text is not None and _search_text != '':
+                _search_text = search_text.lower()
+                if _search_text in searcher:
+                    ttable_but = self.create_list_el("clb_ttible_" + str(timetable_info[i][0]),
+                                                     text,
+                                                     self.ui.sAWContent_timetable)
+            else:
+                ttable_but = self.create_list_el("clb_ttible_" + str(timetable_info[i][0]),
+                                                 text,
+                                                 self.ui.sAWContent_timetable)
         _db.close()
 
 

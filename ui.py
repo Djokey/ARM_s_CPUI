@@ -3,6 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
+        # Jobs in Main
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(932, 556)
         icon = QtGui.QIcon()
@@ -31,6 +32,8 @@ class Ui_MainWindow(object):
         self.tabWidget_Main.setMovable(False)
         self.tabWidget_Main.setTabBarAutoHide(False)
         self.tabWidget_Main.setObjectName("tabWidget_Main")
+
+        # TAB ROSTER
         self.tab_roster = QtWidgets.QWidget()
         self.tab_roster.setObjectName("tab_roster")
         self.vL_tab_roster = QtWidgets.QVBoxLayout(self.tab_roster)
@@ -134,6 +137,8 @@ class Ui_MainWindow(object):
         self.hL_widget_roster_editors.addWidget(self.widget_roster)
         self.vL_tab_roster.addWidget(self.widget_roster_editors)
         self.tabWidget_Main.addTab(self.tab_roster, "")
+
+        # TAB TIMETABLE or TTABLE
         self.tab_timetable = QtWidgets.QWidget()
         self.tab_timetable.setEnabled(True)
         self.tab_timetable.setObjectName("tab_timetable")
@@ -167,12 +172,21 @@ class Ui_MainWindow(object):
         self.pushButton_edit_timetable.setFlat(False)
         self.pushButton_edit_timetable.setObjectName("pushButton_edit_timetable")
         self.hL_widget_Up_timetable.addWidget(self.pushButton_edit_timetable)
+
+        self.pushButton_update_timetable = QtWidgets.QPushButton(self.widget_Up_timetable)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.pushButton_update_timetable.setFont(font)
+        self.pushButton_update_timetable.setObjectName("pushButton_update_timetable")
+        self.hL_widget_Up_timetable.addWidget(self.pushButton_update_timetable)
+
         self.pushButton_print_timetable = QtWidgets.QPushButton(self.widget_Up_timetable)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.pushButton_print_timetable.setFont(font)
         self.pushButton_print_timetable.setObjectName("pushButton_print_timetable")
         self.hL_widget_Up_timetable.addWidget(self.pushButton_print_timetable)
+
         self.label_search_timetable = QtWidgets.QLabel(self.widget_Up_timetable)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -205,6 +219,8 @@ class Ui_MainWindow(object):
         self.vL_widget_timetable.addWidget(self.scrollArea_timetable)
         self.vL_tab_timetable.addWidget(self.widget_timetable)
         self.tabWidget_Main.addTab(self.tab_timetable, "")
+
+        # TAB DECREE
         self.tab_decree = QtWidgets.QWidget()
         self.tab_decree.setObjectName("tab_decree")
         self.vL_tab_decree = QtWidgets.QVBoxLayout(self.tab_decree)
@@ -254,6 +270,8 @@ class Ui_MainWindow(object):
         self.vL_widget_decree.addWidget(self.scrollArea_decree)
         self.vL_tab_decree.addWidget(self.widget_decree)
         self.tabWidget_Main.addTab(self.tab_decree, "")
+
+        # TAB NOTES
         self.tab_notes = QtWidgets.QWidget()
         self.tab_notes.setObjectName("tab_notes")
         self.vL_tab_notes = QtWidgets.QVBoxLayout(self.tab_notes)
@@ -303,6 +321,8 @@ class Ui_MainWindow(object):
         self.vL_widget_notes.addWidget(self.scrollArea_notes)
         self.vL_tab_notes.addWidget(self.widget_notes)
         self.tabWidget_Main.addTab(self.tab_notes, "")
+
+        # Main actions menu and other
         self.vL_widget_Main.addWidget(self.tabWidget_Main)
         self.hL_mainwidget.addWidget(self.widget_Main)
         MainWindow.setCentralWidget(self.mainwidget)
@@ -334,6 +354,7 @@ class Ui_MainWindow(object):
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(self.tab_roster), _translate("MainWindow", "Реестр"))
         self.pushButton_edit_timetable.setText(_translate("MainWindow", "Изменить расписание"))
         self.pushButton_print_timetable.setText(_translate("MainWindow", "Печать"))
+        self.pushButton_update_timetable.setText(_translate("MainWindow", "Обновить список"))
         self.label_search_timetable.setText(_translate("MainWindow", "Поиск:"))
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(self.tab_timetable), _translate("MainWindow", "Расписание"))
         self.pushButton_create_decree.setText(_translate("MainWindow", "Создать новый приказ"))
