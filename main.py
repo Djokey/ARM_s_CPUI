@@ -1,3 +1,5 @@
+import copy
+
 from ui import *
 from headers_ui import *
 from programs_ui import *
@@ -6,6 +8,7 @@ from groups_ui import *
 from subjects_ui import *
 from students_ui import *
 from enrollment_ui import *
+from timetable_edit_ui import *
 from arm_db import *
 import sys
 import os
@@ -59,6 +62,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.enr_ui.setupUi(self.ui.widget_enrollment)
         self.enr_ui.list_cb_checked = []
         self.enr_ui.list_cb_check = []
+
+        self.ttable = QtWidgets.QDialog(self)
+        self.ttable_ui = Ui_TTableEditor()
+        self.ttable_ui.setupUi(self.ttable)
+        self.ttable.setWindowTitle('Редактор расписания')
+
+        self.ttable_selected_sub = ''
+        self.ttable_list = []
 
         self.clear_for_start()
         self.setup_buttons_funcs()
@@ -471,7 +482,7 @@ class MainWindow(QtWidgets.QMainWindow):
                            "id_teacher = '{2}', " \
                            "sub_price_month = '{3}', " \
                            "id_prog = '{4}', " \
-                           "sub_hours = '{5}' " \
+                           "sub_hours_need = '{5}' " \
                            "WHERE id_sub = '{6}'".format(self.sub_ui.textEdit_sub_name.toPlainText(),
                                                          self.sub_ui.lineEdit_sub_tax.text(),
                                                          str(self.sub_ui.comboBox_sub_teach.currentData()),
@@ -492,6 +503,7 @@ class MainWindow(QtWidgets.QMainWindow):
                        "'{3}'," \
                        "'{4}'," \
                        "NULL," \
+                       "'0'," \
                        "'{5}')".format(self.sub_ui.textEdit_sub_name.toPlainText(),
                                        self.sub_ui.lineEdit_sub_tax.text(),
                                        str(self.sub_ui.comboBox_sub_teach.currentData()),
@@ -716,8 +728,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_checked())
 
         self.ui.pushButton_update_timetable.clicked.connect(lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
+        self.ui.pushButton_edit_timetable.clicked.connect(lambda: self.timetable_list_exec())
         self.ui.lineEdit_search_timetable.textEdited.connect(
             lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
+        self.ttable_ui.btn_set_hours.clicked.connect(lambda: self.set_hours())
+        self.ttable_ui.btn_del_hours.clicked.connect(lambda: self.del_hours())
+        self.ttable_ui.calendar.clicked.connect(lambda: self.select_list_el())
 
         self.ui.pushButton_headers_roster.clicked.connect(lambda: self.headers_win())
         self.ui.pushButton_programs_roster.clicked.connect(lambda: self.programs_win())
@@ -804,6 +820,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.icon = QtGui.QIcon()
         self.ui.icon.addPixmap(QtGui.QPixmap("sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.setWindowIcon(self.ui.icon)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ttable.setWindowIcon(icon)
 
     # create_list_el('Здесь objectName для кнопки',
     #                     'Здесь текст, который будет показан',
@@ -1191,7 +1210,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.sub_ui.lineEdit_sub_price.setText(_sub[0][4])
             self.sub_ui.comboBox_sub_prog.setCurrentIndex(
                 self.sub_ui.comboBox_sub_prog.findData(_sub[0][5]))
-            self.sub_ui.lineEdit_sub_hours.setText(_sub[0][7])
+            self.sub_ui.lineEdit_sub_hours.setText(_sub[0][8])
 
         _db = ARMDataBase()
         _sql = "SELECT * FROM subjects"
@@ -1220,7 +1239,7 @@ class MainWindow(QtWidgets.QMainWindow):
             subs[4] = 'Стоимость: ' + subs[4] + '\n' if subs[4] is not None and subs[4] != '' else ''
             subs[5] = 'Программа: ' + sub_prog[0][0] + '\n' if sub_prog[0][0] is not None and sub_prog[0][
                 0] != '' else ''
-            subs[7] = 'Часы: ' + subs[7] + '\n' if subs[7] is not None and subs[7] != '' else ''
+            subs[8] = 'Всего часов: ' + subs[8] + '\n' if subs[8] is not None and subs[8] != '' else ''
             searcher = ''
             _search_text = search_text
             for h in subs:
@@ -1230,12 +1249,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 _search_text = search_text.lower()
                 if _search_text in searcher:
                     sub_but = self.create_list_el(subs[0],
-                                                  subs[1] + subs[2] + subs[3] + subs[4] + subs[5] + subs[7],
+                                                  subs[1] + subs[2] + subs[3] + subs[4] + subs[5] + subs[8],
                                                   self.sub_ui.sAWContent_sub_list)
                     sub_but.clicked.connect(lambda: loader_sub_edits())
             else:
                 sub_but = self.create_list_el(subs[0],
-                                              subs[1] + subs[2] + subs[3] + subs[4] + subs[5] + subs[7],
+                                              subs[1] + subs[2] + subs[3] + subs[4] + subs[5] + subs[8],
                                               self.sub_ui.sAWContent_sub_list)
                 sub_but.clicked.connect(lambda: loader_sub_edits())
         _db.close()
@@ -1513,7 +1532,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def load_db_timetable(self, search_text=None):
         clear_list(self.ui.sAWContent_timetable.children())
         _db = ARMDataBase()
-        _sql = "SELECT id_sub, sub_name, id_teacher, id_prog, sub_hours FROM subjects"
+        _sql = "SELECT id_sub, sub_name, id_teacher, id_prog, sub_hours, sub_hours_need FROM subjects"
         timetable_info = _db.query(_sql)
         for i in range(len(timetable_info)):
             text = "Предмет: {}\n".format(timetable_info[i][1])
@@ -1524,6 +1543,7 @@ class MainWindow(QtWidgets.QMainWindow):
             _sql = "SELECT teacher_name FROM teachers WHERE id_teacher=" + str(timetable_info[i][2])
             teacher_info = _db.query(_sql)
             text += "Преподаватель: {}\n".format(teacher_info[0][0])
+            text += "Необходимо часов: {}\n".format(timetable_info[i][5])
             text += "Часы: {}\n".format(timetable_info[i][4])
             _search_text = search_text
             searcher = text.lower()
@@ -1538,6 +1558,170 @@ class MainWindow(QtWidgets.QMainWindow):
                                                  text,
                                                  self.ui.sAWContent_timetable)
         _db.close()
+
+    # Loader database for exe_Timetable list
+    def load_db_timetable_list(self):
+        def setup_date():
+            for date_ in self.ttable_ui.sAWContent_hours_list.children():
+                if date_.objectName().startswith("clb_"):
+                    if date_.isChecked():
+                        self.ttable_ui.calendar.setSelectedDate(datetime.datetime.fromtimestamp(float(date_.objectName().split("_")[-1])))
+                        break
+
+        clear_list(self.ttable_ui.sAWContent_hours_list.children())
+        _db = ARMDataBase()
+        _sql = "SELECT sub_ttable, sub_hours FROM subjects WHERE id_sub=" + self.ttable_selected_sub
+        timetable_sub = _db.query(_sql)
+        self.ttable_ui.lab_sum.setText("Сумма часов: " + timetable_sub[0][1])
+        parse_timetable = []
+        if timetable_sub[0][0] is not None and timetable_sub[0][0] != '':
+            for date in timetable_sub[0][0].split(","):
+                parse_timetable.append(date)
+            for i in range(len(parse_timetable)):
+                parse_timetable[i] = parse_timetable[i].split("|")
+                parse_timetable[i][0] = datetime.datetime.strptime(parse_timetable[i][0], "%d.%m.%Y")
+                if parse_timetable[i][0].weekday() == 0:
+                    parse_timetable[i].append('Понедельник')
+                elif parse_timetable[i][0].weekday() == 1:
+                    parse_timetable[i].append('Вторник')
+                elif parse_timetable[i][0].weekday() == 2:
+                    parse_timetable[i].append('Среда')
+                elif parse_timetable[i][0].weekday() == 3:
+                    parse_timetable[i].append('Четверг')
+                elif parse_timetable[i][0].weekday() == 4:
+                    parse_timetable[i].append('Пятница')
+                elif parse_timetable[i][0].weekday() == 5:
+                    parse_timetable[i].append('Суббота')
+                elif parse_timetable[i][0].weekday() == 6:
+                    parse_timetable[i].append('Воскресенье')
+
+                if parse_timetable[i][0].strftime("%m") == "01":
+                    parse_timetable[i].append('Января')
+                elif parse_timetable[i][0].strftime("%m") == "02":
+                    parse_timetable[i].append('Февраля')
+                elif parse_timetable[i][0].strftime("%m") == "03":
+                    parse_timetable[i].append('Марта')
+                elif parse_timetable[i][0].strftime("%m") == "04":
+                    parse_timetable[i].append('Апреля')
+                elif parse_timetable[i][0].strftime("%m") == "05":
+                    parse_timetable[i].append('Мая')
+                elif parse_timetable[i][0].strftime("%m") == "06":
+                    parse_timetable[i].append('Июня')
+                elif parse_timetable[i][0].strftime("%m") == "07":
+                    parse_timetable[i].append('Июля')
+                elif parse_timetable[i][0].strftime("%m") == "08":
+                    parse_timetable[i].append('Августа')
+                elif parse_timetable[i][0].strftime("%m") == "09":
+                    parse_timetable[i].append('Сентября')
+                elif parse_timetable[i][0].strftime("%m") == "10":
+                    parse_timetable[i].append('Октября')
+                elif parse_timetable[i][0].strftime("%m") == "11":
+                    parse_timetable[i].append('Ноября')
+                elif parse_timetable[i][0].strftime("%m") == "12":
+                    parse_timetable[i].append('Декабря')
+                btn = self.create_list_el(
+                            "clb_" + str(parse_timetable[i][0].timestamp()),
+                            parse_timetable[i][0].strftime("%d") + " " +
+                            parse_timetable[i][3] + ", " +
+                            parse_timetable[i][2] + ", " +
+                            parse_timetable[i][0].strftime("%Y") + ", " +
+                            parse_timetable[i][1] + " часов",
+                            self.ttable_ui.sAWContent_hours_list
+                       )
+                btn.clicked.connect(lambda: setup_date())
+            self.ttable_list = copy.deepcopy(parse_timetable)
+
+    def del_hours(self):
+        del_hour = datetime.datetime.strptime(self.ttable_ui.calendar.selectedDate().toString('dd.MM.yyyy'),
+                                                "%d.%m.%Y")
+        parsed_hours = ''
+        sum_hours = 0
+
+        for _date in self.ttable_list:
+            if _date[0] == del_hour:
+                self.ttable_list.remove(_date)
+
+        for hour in self.ttable_list:
+            parsed_hours += hour[0].strftime("%d.%m.%Y") + "|" + hour[1] + ','
+            sum_hours += int(hour[1])
+        parsed_hours = parsed_hours[:-1]
+        _db = ARMDataBase()
+        _sql = "UPDATE subjects SET " \
+               "sub_ttable = '{0}', " \
+               "sub_hours = '{1}' " \
+               "WHERE id_sub = '{2}'".format(parsed_hours,
+                                             str(sum_hours),
+                                             self.ttable_selected_sub)
+        _db.query(_sql)
+        _db.close()
+        self.load_db_timetable_list()
+
+    def set_hours(self):
+        parse_hour = datetime.datetime.strptime(self.ttable_ui.calendar.selectedDate().toString('dd.MM.yyyy'),
+                                                "%d.%m.%Y")
+        search_status = 0
+        sum_hours = 0
+        parsed_hours = ''
+        for hour in self.ttable_list:
+            if hour[0] == parse_hour:
+                hour[1] = self.ttable_ui.lEdit_hours.text()
+                search_status = 1
+                break
+            else:
+                search_status = 0
+        if not search_status:
+            self.ttable_list.append([parse_hour, self.ttable_ui.lEdit_hours.text()])
+            self.ttable_list = sorted(
+                self.ttable_list,
+                key=lambda x: x[0], reverse=False
+            )
+        for hour in self.ttable_list:
+            parsed_hours += hour[0].strftime("%d.%m.%Y") + "|" + hour[1] + ','
+            sum_hours += int(hour[1])
+        parsed_hours = parsed_hours[:-1]
+        _db = ARMDataBase()
+        _sql = "UPDATE subjects SET " \
+               "sub_ttable = '{0}', " \
+               "sub_hours = '{1}' " \
+               "WHERE id_sub = '{2}'".format(parsed_hours,
+                                             str(sum_hours),
+                                             self.ttable_selected_sub)
+        _db.query(_sql)
+        _db.close()
+        self.load_db_timetable_list()
+
+    def timetable_list_exec(self):
+        for i in self.ui.sAWContent_timetable.children():
+            if not i.objectName().startswith("clb_ttible_"):
+                pass
+            else:
+                if i.isChecked():
+                    self.ttable_selected_sub = i.objectName().split('_')[-1]
+                    _set_doc_warning = 0
+                    break
+                else:
+                    _set_doc_warning = 1
+        if _set_doc_warning:
+            set_doc_warning("Ошибка (не выбрана запись для изменения)",
+                            'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
+                            'чтобы выбрать ее, а потом нажмите на кнопку '
+                            '"Изменить расписание"')
+        else:
+            self.load_db_timetable_list()
+            self.ttable.exec_()
+
+    def select_list_el(self):
+        if self.ttable_ui.sAWContent_hours_list.findChild(
+            QtWidgets.QCommandLinkButton, "clb_" +
+            str(datetime.datetime.timestamp(datetime.datetime.combine(self.ttable_ui.calendar.selectedDate().toPyDate(),
+                                                                      datetime.datetime.min.time())))
+        ) is not None:
+            self.ttable_ui.sAWContent_hours_list.findChild(
+                QtWidgets.QCommandLinkButton, "clb_" +
+                                              str(datetime.datetime.timestamp(datetime.datetime.combine(
+                                                  self.ttable_ui.calendar.selectedDate().toPyDate(),
+                                                  datetime.datetime.min.time())))
+            ).setChecked(1)
 
 
 # Clearing edit list
