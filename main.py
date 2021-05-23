@@ -1,4 +1,5 @@
 import copy
+import threading
 
 from ui import *
 from headers_ui import *
@@ -16,6 +17,10 @@ import win32api
 import win32print
 import datetime
 from PyQt5.QtWidgets import QMessageBox
+import docx
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.table import _Cell
 
 
 # Class for main window application
@@ -71,6 +76,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ttable_selected_sub = ''
         self.ttable_list = []
 
+        self.disk_dir = os.getenv("SystemDrive")
+        self.user = os.environ.get("USERNAME")
+        self.dir = os.path.abspath(os.curdir)
         self.clear_for_start()
         self.setup_buttons_funcs()
         self.load_for_start()
@@ -122,13 +130,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # Func for setup all buttons
     def setup_buttons_funcs(self):
-        # Func for print docs
-        def print_doc(filepath, filename):
-            f = '"' + filepath + filename + '"'
-            win32api.ShellExecute(0, "printto", f, '"%s"' % win32print.GetDefaultPrinter(), ".", 0)
-
         # But for notes
-        def notes_checked():
+        def notes_print():
             notes_list = self.ui.sAWContent_notes.children()
             _set_doc_warning = 1
             for i in notes_list:
@@ -147,7 +150,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
 
         # But for decree
-        def decree_checked():
+        def decree_print():
             decree_list = self.ui.sAWContent_decree.children()
             _set_doc_warning = 1
             for i in decree_list:
@@ -165,9 +168,26 @@ class MainWindow(QtWidgets.QMainWindow):
                                 'Сначала выберите документ для печати.\n\nНажмите на нужный документ, '
                                 'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
 
-        # But for timetable ПОЗЖЕ НЕ ЗАБЫТЬ БЫ :D
-        # def timetable_checked():
-        #     pass
+        # But for timetable
+        def timetable_print():
+            timetable_list = self.ui.sAWContent_timetable.children()
+            _set_doc_warning = 1
+            for i in timetable_list:
+                if i.objectName().startswith("clb_"):
+                    if i.isChecked():
+                        sent_to_print_timetable(i.objectName().split("_")[-1])
+                        _set_doc_warning = 0
+                        break
+                    else:
+                        _set_doc_warning = 1
+            if _set_doc_warning:
+                set_doc_warning("Ошибка (не выбрано расписание для печати)",
+                                'Сначала выберите расписание для печати.\n\nНажмите на нужное расписание, '
+                                'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
+            else:
+                set_doc_warning("Отправлено",
+                                'Документ будет сохранен на рабочий стол и отправлен на печать.')
+
 
         # But for notes
         def headers_control_db(type_post):
@@ -724,8 +744,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.widget_roster.show()
 
         # SETUP BUTS
-        self.ui.pushButton_print_notes.clicked.connect(lambda: notes_checked())
-        self.ui.pushButton_print_decree.clicked.connect(lambda: decree_checked())
+        self.ui.pushButton_print_notes.clicked.connect(lambda: notes_print())
+        self.ui.pushButton_print_decree.clicked.connect(lambda: decree_print())
+        self.ui.pushButton_print_timetable.clicked.connect(lambda: timetable_print())
 
         self.ui.pushButton_update_timetable.clicked.connect(lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
         self.ui.pushButton_edit_timetable.clicked.connect(lambda: self.timetable_list_exec())
@@ -1724,6 +1745,242 @@ class MainWindow(QtWidgets.QMainWindow):
             ).setChecked(1)
 
 
+def sent_to_print_timetable(sub):
+    thread_list = []
+    task = threading.Thread(target=TimetablePrint(), args=(sub,))
+    thread_list.append(task)
+    task.deamon = True
+    task.start()
+
+
+class TimetablePrint:
+    def __call__(self, sub):
+        path, filename = create_and_print_timetable_doc(sub)
+        print_doc(path, filename)
+
+
+def create_and_print_timetable_doc(_sub):
+    disk_dir = os.getenv("SystemDrive")
+    user = os.environ.get("USERNAME")
+    path = r"{}\Users\{}\Desktop/".format(
+        disk_dir,
+        user
+        )
+
+    _db = ARMDataBase('arm_db.db')
+
+    _sql = "SELECT sub_ttable, sub_name, id_prog FROM subjects WHERE id_sub=" + _sub
+    timetable = _db.query(_sql)
+
+    _sql = "SELECT group_name FROM groups WHERE id_prog=" + str(timetable[0][2])
+    group_name = _db.query(_sql)[0][0]
+
+    _sql = "SELECT id_student FROM subs_in_studs WHERE id_sub=" + _sub
+    students_q = _db.query(_sql)
+    students = []
+
+    copy_index = 0
+    filename = "Расписание " + group_name + " " + timetable[0][1] + ".docx"
+    desk_list_dir = os.listdir(path)
+    while filename in desk_list_dir:
+        copy_index += 1
+        filename = "Расписание " + group_name + " " + timetable[0][1] + " (" + str(copy_index) + ").docx"
+
+    for i in range(len(students_q)):
+        students.append([str(students_q[i][0])])
+        _sql = "SELECT student_name FROM students WHERE id_student=" + str(students_q[i][0])
+        students[i].append(_db.query(_sql)[0][0])
+
+    _db.close()
+
+    students.sort(key=lambda x: x[1])
+
+    parse_timetable = []
+    if timetable[0][0] is not None and timetable[0][0] != '':
+        for date in timetable[0][0].split(","):
+            parse_timetable.append(date)
+        for i in range(len(parse_timetable)):
+            parse_timetable[i] = parse_timetable[i].split("|")
+            parse_timetable[i][0] = datetime.datetime.strptime(parse_timetable[i][0], "%d.%m.%Y")
+            if parse_timetable[i][0].weekday() == 0:
+                parse_timetable[i].append('Понедельник')
+            elif parse_timetable[i][0].weekday() == 1:
+                parse_timetable[i].append('Вторник')
+            elif parse_timetable[i][0].weekday() == 2:
+                parse_timetable[i].append('Среда')
+            elif parse_timetable[i][0].weekday() == 3:
+                parse_timetable[i].append('Четверг')
+            elif parse_timetable[i][0].weekday() == 4:
+                parse_timetable[i].append('Пятница')
+            elif parse_timetable[i][0].weekday() == 5:
+                parse_timetable[i].append('Суббота')
+            elif parse_timetable[i][0].weekday() == 6:
+                parse_timetable[i].append('Воскресенье')
+
+            if parse_timetable[i][0].strftime("%m") == "01":
+                parse_timetable[i].append('Января')
+            elif parse_timetable[i][0].strftime("%m") == "02":
+                parse_timetable[i].append('Февраля')
+            elif parse_timetable[i][0].strftime("%m") == "03":
+                parse_timetable[i].append('Марта')
+            elif parse_timetable[i][0].strftime("%m") == "04":
+                parse_timetable[i].append('Апреля')
+            elif parse_timetable[i][0].strftime("%m") == "05":
+                parse_timetable[i].append('Мая')
+            elif parse_timetable[i][0].strftime("%m") == "06":
+                parse_timetable[i].append('Июня')
+            elif parse_timetable[i][0].strftime("%m") == "07":
+                parse_timetable[i].append('Июля')
+            elif parse_timetable[i][0].strftime("%m") == "08":
+                parse_timetable[i].append('Августа')
+            elif parse_timetable[i][0].strftime("%m") == "09":
+                parse_timetable[i].append('Сентября')
+            elif parse_timetable[i][0].strftime("%m") == "10":
+                parse_timetable[i].append('Октября')
+            elif parse_timetable[i][0].strftime("%m") == "11":
+                parse_timetable[i].append('Ноября')
+            elif parse_timetable[i][0].strftime("%m") == "12":
+                parse_timetable[i].append('Декабря')
+
+    doc = docx.Document()
+
+    doc.sections[-1].orientation = docx.enum.section.WD_ORIENTATION.PORTRAIT
+    doc.sections[-1].page_height = docx.shared.Cm(21)
+    doc.sections[-1].page_width = docx.shared.Cm(29.7)
+    doc.sections[-1].top_margin = docx.shared.Cm(1.3)
+    doc.sections[-1].right_margin = docx.shared.Cm(1)
+    doc.sections[-1].left_margin = docx.shared.Cm(1)
+    doc.sections[-1].bottom_margin = docx.shared.Cm(1)
+
+    doc.add_paragraph(group_name + " " + timetable[0][1])
+    doc.paragraphs[0].runs[0].bold = True
+    doc.paragraphs[0].runs[0].font.name = "Times New Roman"
+    doc.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+
+    tabs_c = str(len(parse_timetable) / 22).split(".")
+
+    if tabs_c[1] != "0":
+        tabs_c = int(tabs_c[0]) + 1
+    else:
+        tabs_c = int(tabs_c[0])
+
+    if len(parse_timetable) - (22 * (tabs_c - 1)) <= 10:
+        len_date = 27
+    else:
+        len_date = 22
+
+    tabs_c = str(len(parse_timetable) / len_date).split(".")
+
+    if tabs_c[1] != "0":
+        tabs_c = int(tabs_c[0]) + 1
+    else:
+        tabs_c = int(tabs_c[0])
+
+    table_timetable_list = []
+
+    for i in range(tabs_c):
+        if tabs_c == 1:
+            table_timetable = doc.add_table(rows=1 + len(students), cols=2 + len(parse_timetable), style='Table Grid')
+            table_timetable_list.append(table_timetable)
+        elif i + 1 != tabs_c:
+            table_timetable = doc.add_table(rows=1 + len(students), cols=2 + len_date, style='Table Grid')
+            table_timetable_list.append(table_timetable)
+            par = doc.add_paragraph('_')
+            if len(students) > 13:
+                par.runs[0].add_break(docx.enum.text.WD_BREAK.PAGE)
+            else:
+                par.runs[0].font.size = docx.shared.Pt(1)
+                par.paragraph_format.space_after = docx.shared.Pt(0)
+                par.paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+        else:
+            table_timetable = doc.add_table(rows=1 + len(students), cols=2 + len(parse_timetable) - (len_date * (tabs_c - 1)), style='Table Grid')
+            table_timetable_list.append(table_timetable)
+
+    for i in range(len(table_timetable_list)):
+        for row in range(len(table_timetable_list[i].rows)):
+            for col in range(len(table_timetable_list[i].columns)):
+                cell = table_timetable_list[i].cell(row, col)
+                if row == 0 and col == 0:
+                    cell.text = "№\nп\\п"
+                    cell.paragraphs[0].runs[0].bold = True
+                    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+                    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER
+                    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+                    cell.width = docx.shared.Cm(0.89)
+                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                elif row == 0 and col == 1:
+                    cell.text = "ФИО"
+                    cell.paragraphs[0].runs[0].bold = True
+                    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+                    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER
+                    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+                    cell.width = docx.shared.Cm(5.5)
+                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                elif row > 0 and col == 0:
+                    cell.text = str(row) + "."
+                    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+                    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+                    cell.width = docx.shared.Cm(0.89)
+                    table_timetable_list[i].rows[row].height = docx.shared.Cm(0.4)
+                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                elif row > 0 and col == 1:
+                    cell.text = students[row - 1][1]
+                    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+                    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+                    cell.width = docx.shared.Cm(5.8)
+                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.TOP
+                elif row == 0 and col > 1:
+                    cell.text = parse_timetable[0][0].strftime("%d")[1:] \
+                        if parse_timetable[0][0].strftime("%d").startswith("0") \
+                        else parse_timetable[0][0].strftime("%d")
+                    cell.text += " " + parse_timetable[0][3]
+                    parse_timetable.pop(0)
+                    cell.paragraphs[0].runs[0].bold = True
+                    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+                    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+                    cell.paragraphs[0].paragraph_format.left_indent = docx.shared.Cm(0.2)
+                    cell.paragraphs[0].paragraph_format.right_indent = docx.shared.Cm(0.2)
+                    cell.width = docx.shared.Cm(0.81)
+                    table_timetable_list[i].rows[row].height = docx.shared.Cm(2.5)
+                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                    set_vertical_cell_direction(cell, "btLr")
+                else:
+                    cell.text = ""
+                    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+                    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+                    cell.width = docx.shared.Cm(0.81)
+                    table_timetable_list[i].rows[row].height = docx.shared.Cm(0.4)
+                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+
+    properties = doc.core_properties
+    properties.author = "ЦПЮИ ХТИ"
+
+    doc.save(path + filename)
+    return path, filename
+
+
+def set_vertical_cell_direction(cell: _Cell, direction: str):
+    # direction: tbRl -- top to bottom, btLr -- bottom to top
+    assert direction in ("tbRl", "btLr")
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    textDirection = OxmlElement('w:textDirection')
+    textDirection.set(qn('w:val'), direction)  # btLr tbRl
+    tcPr.append(textDirection)
+
+
 # Clearing edit list
 def clear_list(children_list):
     for i in children_list:
@@ -1738,6 +1995,12 @@ def clear_group_box(group_box):
         if i.objectName().startswith('el_') or i.objectName().startswith('grB_'):
             i.setAttribute(55, 1)
             i.close()
+
+
+# Func for print docs
+def print_doc(filepath, filename):
+    f = '"' + filepath + filename + '"'
+    win32api.ShellExecute(0, "printto", f, '"%s"' % win32print.GetDefaultPrinter(), ".", 0)
 
 
 # Func for warning
