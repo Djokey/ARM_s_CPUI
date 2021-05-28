@@ -264,6 +264,9 @@ class Ui_Enrollment(object):
         self.hL_Enrollment.setStretch(0, 1)
         self.hL_Enrollment.setStretch(1, 2)
 
+        self.list_cb_checked = []
+        self.list_cb_check = []
+
         self.retranslateUi(Enrollment)
         QtCore.QMetaObject.connectSlotsByName(Enrollment)
 

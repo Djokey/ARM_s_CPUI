@@ -1,5 +1,6 @@
 import copy
 import threading
+import time
 
 from ui import *
 from headers_ui import *
@@ -9,6 +10,7 @@ from groups_ui import *
 from subjects_ui import *
 from students_ui import *
 from enrollment_ui import *
+from outlay_ui import *
 from timetable_edit_ui import *
 from arm_db import *
 import sys
@@ -17,6 +19,7 @@ import win32api
 import win32print
 import datetime
 from PyQt5.QtWidgets import QMessageBox
+from PyQt5 import QtCore, QtGui, QtWidgets
 import docx
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -61,12 +64,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stud_ui = Ui_Students()
         self.stud_ui.setupUi(self.ui.widget_students)
 
+        self.ui.widget_outlay = QtWidgets.QWidget(self.ui.widget_roster_editors)
+        self.ui.hL_widget_roster_editors.addWidget(self.ui.widget_outlay)
+        self.outlay_ui = Ui_Outlay()
+        self.outlay_ui.setupUi(self.ui.widget_outlay)
+
         self.ui.widget_enrollment = QtWidgets.QWidget(self.ui.widget_roster_editors)
         self.ui.hL_widget_roster_editors.addWidget(self.ui.widget_enrollment)
         self.enr_ui = Ui_Enrollment()
         self.enr_ui.setupUi(self.ui.widget_enrollment)
-        self.enr_ui.list_cb_checked = []
-        self.enr_ui.list_cb_check = []
 
         self.ttable = QtWidgets.QDialog(self)
         self.ttable_ui = Ui_TTableEditor()
@@ -82,7 +88,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.clear_for_start()
         self.setup_buttons_funcs()
         self.load_for_start()
-        self.resize(1000, 600)
+        self.resize(1000, 885)
 
         # MAIN END
 
@@ -127,6 +133,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_roster.hide()
         self.ui.widget_enrollment.show()
         self.load_db_enrollment()
+
+    # Func for edit database table Outlay
+    def outlay_win(self):
+        self.ui.widget_roster.hide()
+        self.ui.widget_outlay.show()
+        self.load_db_outlay()
 
     # Func for setup all buttons
     def setup_buttons_funcs(self):
@@ -187,7 +199,6 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 set_doc_warning("Отправлено",
                                 'Документ будет сохранен на рабочий стол и отправлен на печать.')
-
 
         # But for notes
         def headers_control_db(type_post):
@@ -715,6 +726,53 @@ class MainWindow(QtWidgets.QMainWindow):
                 _db.close()
                 self.load_db_enrollment()
 
+        def outlay_control_db():
+            self.save_calculate_values()
+            self.outlay_ui.calcs_before = len(self.outlay_ui.widget_calcs.children()) - 1
+            clear_widget(self.outlay_ui.widget_calcs.children())
+            if self.outlay_ui.comboBox_progs.currentData() == "None" or self.outlay_ui.comboBox_progs.currentData() is None:
+                self.outlay_ui.widget_col_subs.setEnabled(True)
+                rb = 0
+                if self.outlay_ui.radio_col_1.isChecked():
+                    rb = 1
+                elif self.outlay_ui.radio_col_2.isChecked():
+                    rb = 2
+                elif self.outlay_ui.radio_col_3.isChecked():
+                    rb = 3
+                elif self.outlay_ui.radio_col_4.isChecked():
+                    rb = 4
+                for r in range(rb):
+                    if r + 1 == 1:
+                        self.add_calculate_box(False, str(r + 1), 0, 0)
+                    elif r + 1 == 2:
+                        self.add_calculate_box(False, str(r + 1), 1, 0)
+                    elif r + 1 == 3:
+                        self.add_calculate_box(False, str(r + 1), 0, 1)
+                    elif r + 1 == 4:
+                        self.add_calculate_box(False, str(r + 1), 1, 1)
+                self.load_calculate_values()
+            else:
+                self.outlay_ui.widget_col_subs.setEnabled(False)
+                _db = ARMDataBase()
+                _sql = "SELECT id_sub FROM subjects WHERE id_prog=" + str(self.outlay_ui.comboBox_progs.currentData())
+                subs = _db.query(_sql)
+                self.outlay_ui.widget_col_subs.findChild(QtWidgets.QRadioButton,
+                                                         "radio_col_" + str(len(subs))).setChecked(True)
+                _db.close()
+                a = 0
+                b = 0
+                for i in subs:
+                    self.add_calculate_box(True, str(i[0]), a, b)
+                    if a == 0 and b == 0:
+                        a = 1
+                        b = 0
+                    elif a == 1 and b == 0:
+                        a = 0
+                        b = 1
+                    elif a == 0 and b == 1:
+                        a = 1
+                        b = 1
+
         def headers_back():
             self.ui.widget_headers.hide()
             self.ui.widget_roster.show()
@@ -743,12 +801,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.widget_enrollment.hide()
             self.ui.widget_roster.show()
 
+        def outlay_back():
+            self.ui.widget_outlay.hide()
+            self.ui.widget_roster.show()
+
         # SETUP BUTS
         self.ui.pushButton_print_notes.clicked.connect(lambda: notes_print())
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_print())
         self.ui.pushButton_print_timetable.clicked.connect(lambda: timetable_print())
 
-        self.ui.pushButton_update_timetable.clicked.connect(lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
+        self.ui.pushButton_update_timetable.clicked.connect(
+            lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
         self.ui.pushButton_edit_timetable.clicked.connect(lambda: self.timetable_list_exec())
         self.ui.lineEdit_search_timetable.textEdited.connect(
             lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
@@ -763,6 +826,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_subjects_roster.clicked.connect(lambda: self.subjects_win())
         self.ui.pushButton_students_roster.clicked.connect(lambda: self.students_win())
         self.ui.pushButton_enrollment_roster.clicked.connect(lambda: self.enrollment_win())
+        self.ui.pushButton_outlay.clicked.connect(lambda: self.outlay_win())
 
         self.head_ui.pushButton_headers_add.clicked.connect(lambda: headers_control_db('add'))
         self.head_ui.pushButton_headers_save.clicked.connect(lambda: headers_control_db('save'))
@@ -811,6 +875,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.enr_ui.lineEdit_search_enr.textEdited.connect(
             lambda: self.load_db_enrollment(self.enr_ui.lineEdit_search_enr.text()))
 
+        self.outlay_ui.pushButton_outlay_back.clicked.connect(lambda: outlay_back())
+        self.outlay_ui.comboBox_progs.currentIndexChanged.connect(lambda: outlay_control_db())
+        self.outlay_ui.radio_col_1.clicked.connect(lambda: outlay_control_db())
+        self.outlay_ui.radio_col_2.clicked.connect(lambda: outlay_control_db())
+        self.outlay_ui.radio_col_3.clicked.connect(lambda: outlay_control_db())
+        self.outlay_ui.radio_col_4.clicked.connect(lambda: outlay_control_db())
+
     # END BUTTONS
 
     def clear_for_start(self):
@@ -821,6 +892,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_subjects.hide()
         self.ui.widget_students.hide()
         self.ui.widget_enrollment.hide()
+        self.ui.widget_outlay.hide()
 
     def load_for_start(self):
         notes_list = os.listdir(os.path.abspath(os.curdir) + r'/Документы/Записки/')
@@ -1169,6 +1241,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
             _sql = "SELECT prog_name FROM programs WHERE id_prog=" + str(grps[3])
             group_prog = _db.query(_sql)
+            if not group_prog:
+                group_prog = [["Отсутствует"]]
 
             grps[0] = 'clb_grp_' + str(grps[0])
             grps[1] = 'Класс: ' + grps[1] + '\n' if grps[1] is not None and grps[1] != '' else ''
@@ -1549,6 +1623,25 @@ class MainWindow(QtWidgets.QMainWindow):
                 stud_but.clicked.connect(lambda: loader_enr_edits())
         _db.close()
 
+    # Loader database for Outlay Calculator
+    def load_db_outlay(self):
+        _db = ARMDataBase()
+        _sql = "SELECT * FROM programs"
+        programs = _db.query(_sql)
+        _db.close()
+
+        self.outlay_ui.comboBox_progs.clear()
+        self.create_combo_box_el(self.outlay_ui.comboBox_progs, "None", "Отсутствует")
+        for prog in programs:
+            self.create_combo_box_el(self.outlay_ui.comboBox_progs, prog[0], str(prog[1]))
+        clear_widget(self.outlay_ui.widget_calcs.children())
+
+        self.outlay_ui.radio_col_1.setChecked(True)
+        self.add_calculate_box(False, "1", 0, 0)
+        # self.add_calculate_box(False, "2", 1, 0)
+        # self.add_calculate_box(False, "3", 0, 1)
+        # self.add_calculate_box(False, "4", 1, 1)
+
     # Loader database for Timetable list
     def load_db_timetable(self, search_text=None):
         clear_list(self.ui.sAWContent_timetable.children())
@@ -1586,7 +1679,8 @@ class MainWindow(QtWidgets.QMainWindow):
             for date_ in self.ttable_ui.sAWContent_hours_list.children():
                 if date_.objectName().startswith("clb_"):
                     if date_.isChecked():
-                        self.ttable_ui.calendar.setSelectedDate(datetime.datetime.fromtimestamp(float(date_.objectName().split("_")[-1])))
+                        self.ttable_ui.calendar.setSelectedDate(
+                            datetime.datetime.fromtimestamp(float(date_.objectName().split("_")[-1])))
                         break
 
         clear_list(self.ttable_ui.sAWContent_hours_list.children())
@@ -1641,20 +1735,20 @@ class MainWindow(QtWidgets.QMainWindow):
                 elif parse_timetable[i][0].strftime("%m") == "12":
                     parse_timetable[i].append('Декабря')
                 btn = self.create_list_el(
-                            "clb_" + str(parse_timetable[i][0].timestamp()),
-                            parse_timetable[i][0].strftime("%d") + " " +
-                            parse_timetable[i][3] + ", " +
-                            parse_timetable[i][2] + ", " +
-                            parse_timetable[i][0].strftime("%Y") + ", " +
-                            parse_timetable[i][1] + " часов",
-                            self.ttable_ui.sAWContent_hours_list
-                       )
+                    "clb_" + str(parse_timetable[i][0].timestamp()),
+                    parse_timetable[i][0].strftime("%d") + " " +
+                    parse_timetable[i][3] + ", " +
+                    parse_timetable[i][2] + ", " +
+                    parse_timetable[i][0].strftime("%Y") + ", " +
+                    parse_timetable[i][1] + " часов",
+                    self.ttable_ui.sAWContent_hours_list
+                )
                 btn.clicked.connect(lambda: setup_date())
             self.ttable_list = copy.deepcopy(parse_timetable)
 
     def del_hours(self):
         del_hour = datetime.datetime.strptime(self.ttable_ui.calendar.selectedDate().toString('dd.MM.yyyy'),
-                                                "%d.%m.%Y")
+                                              "%d.%m.%Y")
         parsed_hours = ''
         sum_hours = 0
 
@@ -1733,9 +1827,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def select_list_el(self):
         if self.ttable_ui.sAWContent_hours_list.findChild(
-            QtWidgets.QCommandLinkButton, "clb_" +
-            str(datetime.datetime.timestamp(datetime.datetime.combine(self.ttable_ui.calendar.selectedDate().toPyDate(),
-                                                                      datetime.datetime.min.time())))
+                QtWidgets.QCommandLinkButton, "clb_" +
+                                              str(datetime.datetime.timestamp(datetime.datetime.combine(
+                                                  self.ttable_ui.calendar.selectedDate().toPyDate(),
+                                                  datetime.datetime.min.time())))
         ) is not None:
             self.ttable_ui.sAWContent_hours_list.findChild(
                 QtWidgets.QCommandLinkButton, "clb_" +
@@ -1744,6 +1839,224 @@ class MainWindow(QtWidgets.QMainWindow):
                                                   datetime.datetime.min.time())))
             ).setChecked(1)
 
+    def add_calculate_box(self, sel_sub=False, id_sub="", i=0, j=0):
+        calc_box = QtWidgets.QGroupBox(self.outlay_ui.widget_calcs)
+        calc_box.setObjectName("calc_box_" + id_sub)
+        gL_calc_box = QtWidgets.QGridLayout(calc_box)
+        gL_calc_box.setObjectName("gL_calc_box_" + id_sub)
+        studs_col = [['0']]
+
+        if sel_sub:
+            _db = ARMDataBase()
+            _sql = "SELECT sub_name, sub_price_hour, sub_price_month, sub_hours_need FROM subjects WHERE id_sub=" + id_sub
+            sub_info = _db.query(_sql)
+
+            calc_box.setTitle(sub_info[0][0])
+
+            _sql = "SELECT COUNT(*) FROM subs_in_studs WHERE id_sub=" + id_sub
+            studs_col = _db.query(_sql)
+
+            _db.close()
+        else:
+            calc_box.setTitle("Предмет " + id_sub)
+
+        lab_studs = QtWidgets.QLabel(calc_box)
+        lab_studs.setObjectName("lab_studs_" + id_sub)
+        lab_studs.setText(self._translate("Outlay", "Слушатели: "))
+        gL_calc_box.addWidget(lab_studs, 1, 0)
+
+        check_auto = QtWidgets.QCheckBox(calc_box)
+        check_auto.setObjectName("check_auto_" + id_sub)
+        check_auto.setChecked(True)
+        check_auto.setText(self._translate("Outlay", "Автоматически"))
+        gL_calc_box.addWidget(check_auto, 0, 2)
+
+        spin_studs = QtWidgets.QSpinBox(calc_box)
+        spin_studs.setObjectName("spin_studs_" + id_sub)
+        spin_studs.setMaximum(100000)
+        spin_studs.setSingleStep(1)
+        gL_calc_box.addWidget(spin_studs, 1, 1)
+
+        radio_variability_studs = QtWidgets.QRadioButton(calc_box)
+        radio_variability_studs.setObjectName("radio_variability_studs_" + id_sub)
+        gL_calc_box.addWidget(radio_variability_studs, 1, 2)
+
+        lab_price = QtWidgets.QLabel(calc_box)
+        lab_price.setObjectName("lab_price_" + id_sub)
+        lab_price.setText(self._translate("Outlay", "Стоимость: "))
+        gL_calc_box.addWidget(lab_price, 2, 0)
+
+        spin_price = QtWidgets.QSpinBox(calc_box)
+        spin_price.setObjectName("spin_price_" + id_sub)
+        spin_price.setMaximum(1000000000)
+        spin_price.setSingleStep(100)
+        gL_calc_box.addWidget(spin_price, 2, 1)
+
+        radio_variability_price = QtWidgets.QRadioButton(calc_box)
+        radio_variability_price.setObjectName("radio_variability_price_" + id_sub)
+        radio_variability_price.setChecked(True)
+        gL_calc_box.addWidget(radio_variability_price, 2, 2)
+
+        lab_tax = QtWidgets.QLabel(calc_box)
+        lab_tax.setObjectName("lab_tax_" + id_sub)
+        lab_tax.setText(self._translate("Outlay", "Часовая стоимость: "))
+        gL_calc_box.addWidget(lab_tax, 3, 0)
+
+        spin_tax = QtWidgets.QSpinBox(calc_box)
+        spin_tax.setObjectName("spin_tax_" + id_sub)
+        spin_tax.setMaximum(1000000000)
+        spin_tax.setSingleStep(50)
+        gL_calc_box.addWidget(spin_tax, 3, 1)
+
+        radio_variability_tax = QtWidgets.QRadioButton(calc_box)
+        radio_variability_tax.setObjectName("radio_variability_tax_" + id_sub)
+        gL_calc_box.addWidget(radio_variability_tax, 3, 2)
+
+        lab_hours = QtWidgets.QLabel(calc_box)
+        lab_hours.setObjectName("lab_hours_" + id_sub)
+        lab_hours.setText(self._translate("Outlay", "Часы: "))
+        gL_calc_box.addWidget(lab_hours, 4, 0)
+
+        spin_hours = QtWidgets.QSpinBox(calc_box)
+        spin_hours.setObjectName("spin_hours_" + id_sub)
+        spin_hours.setMaximum(1000)
+        spin_hours.setSingleStep(2)
+        gL_calc_box.addWidget(spin_hours, 4, 1)
+
+        spin_studs.valueChanged.connect(lambda: self.calculate_values())
+        spin_hours.valueChanged.connect(lambda: self.calculate_values())
+        spin_tax.valueChanged.connect(lambda: self.calculate_values())
+        spin_price.valueChanged.connect(lambda: self.calculate_values())
+        check_auto.clicked.connect(lambda: self.outlay_check_click())
+
+        if sel_sub:
+            spin_studs.setValue(studs_col[0][0])
+            spin_price.setValue(int(sub_info[0][2]))
+            spin_tax.setValue(int(sub_info[0][1]))
+            spin_hours.setValue(int(sub_info[0][3]))
+
+        self.outlay_ui.gL_widget_calcs.addWidget(calc_box, i, j)
+        return calc_box
+
+    def save_calculate_values(self):
+        i = 0
+        for calc_box in self.outlay_ui.widget_calcs.children():
+            if calc_box.objectName().startswith("calc_box_") and i < 4:
+                for child in calc_box.children():
+                    if child.objectName().startswith("spin_studs_"):
+                        self.outlay_ui.variability_list[i][0] = child.value()
+                    elif child.objectName().startswith("spin_price_"):
+                        self.outlay_ui.variability_list[i][1] = child.value()
+                    elif child.objectName().startswith("spin_tax_"):
+                        self.outlay_ui.variability_list[i][2] = child.value()
+                    elif child.objectName().startswith("spin_hours_"):
+                        self.outlay_ui.variability_list[i][3] = child.value()
+                    elif child.objectName().startswith("radio_variability_studs_") and child.isChecked():
+                        self.outlay_ui.variability_list[i][4] = "radio_variability_studs_"
+                    elif child.objectName().startswith("radio_variability_price_") and child.isChecked():
+                        self.outlay_ui.variability_list[i][4] = "radio_variability_price_"
+                    elif child.objectName().startswith("radio_variability_tax_") and child.isChecked():
+                        self.outlay_ui.variability_list[i][4] = "radio_variability_tax_"
+                    elif child.objectName().startswith("check_auto_"):
+                        self.outlay_ui.variability_list[i][5] = child.isChecked()
+                i += 1
+
+    def load_calculate_values(self):
+        i = 0
+        j = 0
+        for calc_box in self.outlay_ui.widget_calcs.children():
+            if calc_box.objectName().startswith("calc_box_"):
+                if j < self.outlay_ui.calcs_before:
+                    j += 1
+                else:
+                    for child in calc_box.children():
+                        if child.objectName().startswith("spin_studs_") and self.outlay_ui.variability_list[i][0] != "":
+                            child.setValue(self.outlay_ui.variability_list[i][0])
+                        elif child.objectName().startswith("spin_price_") and self.outlay_ui.variability_list[i][1] != "":
+                            child.setValue(self.outlay_ui.variability_list[i][1])
+                        elif child.objectName().startswith("spin_tax_") and self.outlay_ui.variability_list[i][2] != "":
+                            child.setValue(self.outlay_ui.variability_list[i][2])
+                        elif child.objectName().startswith("spin_hours_") and self.outlay_ui.variability_list[i][3] != "":
+                            child.setValue(self.outlay_ui.variability_list[i][3])
+                        elif self.outlay_ui.variability_list[i][4] in child.objectName() and self.outlay_ui.variability_list[i][4] != "":
+                            child.setChecked(True)
+                        elif child.objectName().startswith("check_auto_") and self.outlay_ui.variability_list[i][5] != "":
+                            child.setChecked(self.outlay_ui.variability_list[i][5])
+                    i += 1
+        self.outlay_check_click()
+
+    def calculate_values(self):
+        price = [0, 0, 0, 0]
+        studs = [0, 0, 0, 0]
+        hours = [0, 0, 0, 0]
+        tax = [0, 0, 0, 0]
+        profit = 0
+        cost = 0
+        i = 0
+        for calc_box in self.outlay_ui.widget_calcs.children():
+            if calc_box.objectName().startswith("calc_box_") and i < 4:
+                if calc_box.findChild(QtWidgets.QCheckBox, "check_auto_" + calc_box.objectName().split("_")[-1]).isChecked():
+                    for child in calc_box.children():
+                        if child.objectName().startswith("radio_variability_tax_") \
+                                and child.isChecked() \
+                                and calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value() != 0:
+                            calc_box.findChild(QtWidgets.QSpinBox, "spin_tax_" + calc_box.objectName().split("_")[-1]).setValue(round(
+                                (1/2*
+                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).value() *
+                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).value()) /
+                                calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value()))
+                        elif child.objectName().startswith("radio_variability_price_") \
+                                and child.isChecked() \
+                                and calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).value() != 0:
+                            calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).setValue(round(
+                                (2*
+                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_tax_" + calc_box.objectName().split("_")[-1]).value() *
+                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value()) /
+                                calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).value()))
+                        elif child.objectName().startswith("radio_variability_studs_") \
+                                and child.isChecked() \
+                                and calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).value() != 0:
+                            calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).setValue(round(
+                                (2*
+                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value() *
+                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_tax_" + calc_box.objectName().split("_")[-1]).value()) /
+                                calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).value()))
+                i += 1
+        i = 0
+        for calc_box in self.outlay_ui.widget_calcs.children():
+            if calc_box.objectName().startswith("calc_box_") and i < 4:
+                for child in calc_box.children():
+                    if child.objectName().startswith("spin_studs_"):
+                        studs[i] = child.value()
+                    elif child.objectName().startswith("spin_price_"):
+                        price[i] = child.value()
+                    elif child.objectName().startswith("spin_tax_"):
+                        tax[i] = child.value()
+                    elif child.objectName().startswith("spin_hours_"):
+                        hours[i] = child.value()
+                i += 1
+        for j in range(i):
+            profit += price[j] * studs[j]
+            cost += (hours[j] * tax[j]) * 1.302
+        self.outlay_ui.label_profit.setText("Доходы = " + str(profit) + " рублей")
+        self.outlay_ui.label_cost.setText("Оплата часов + ФОТ = " + str(round(cost, 2)) + " рублей")
+        if profit != 0:
+            self.outlay_ui.label_otfot.setText("Оплата часов + ФОТ % = " + str(round(cost / profit * 100, 2)) + "%")
+
+    def outlay_check_click(self):
+        for calc_box in self.outlay_ui.widget_calcs.children():
+            if calc_box.objectName().startswith("calc_box_"):
+                for child in calc_box.children():
+                    if child.objectName().startswith("check_auto_") \
+                            and child.isChecked():
+                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + calc_box.objectName().split("_")[-1]).setEnabled(True)
+                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + calc_box.objectName().split("_")[-1]).setEnabled(True)
+                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + calc_box.objectName().split("_")[-1]).setEnabled(True)
+                    elif child.objectName().startswith("check_auto_") \
+                            and not child.isChecked():
+                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + calc_box.objectName().split("_")[-1]).setEnabled(False)
+                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + calc_box.objectName().split("_")[-1]).setEnabled(False)
+                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + calc_box.objectName().split("_")[-1]).setEnabled(False)
 
 def sent_to_print_timetable(sub):
     thread_list = []
@@ -1765,7 +2078,7 @@ def create_and_print_timetable_doc(_sub):
     path = r"{}\Users\{}\Desktop/".format(
         disk_dir,
         user
-        )
+    )
 
     _db = ARMDataBase('arm_db.db')
 
@@ -1893,7 +2206,9 @@ def create_and_print_timetable_doc(_sub):
                 par.paragraph_format.space_after = docx.shared.Pt(0)
                 par.paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
         else:
-            table_timetable = doc.add_table(rows=1 + len(students), cols=2 + len(parse_timetable) - (len_date * (tabs_c - 1)), style='Table Grid')
+            table_timetable = doc.add_table(rows=1 + len(students),
+                                            cols=2 + len(parse_timetable) - (len_date * (tabs_c - 1)),
+                                            style='Table Grid')
             table_timetable_list.append(table_timetable)
 
     for i in range(len(table_timetable_list)):
@@ -1971,6 +2286,7 @@ def create_and_print_timetable_doc(_sub):
     return path, filename
 
 
+# Set font vertical direction in docx
 def set_vertical_cell_direction(cell: _Cell, direction: str):
     # direction: tbRl -- top to bottom, btLr -- bottom to top
     assert direction in ("tbRl", "btLr")
@@ -1993,6 +2309,14 @@ def clear_list(children_list):
 def clear_group_box(group_box):
     for i in group_box:
         if i.objectName().startswith('el_') or i.objectName().startswith('grB_'):
+            i.setAttribute(55, 1)
+            i.close()
+
+
+# Clearing widget
+def clear_widget(widget):
+    for i in widget:
+        if i.objectName().startswith('calc_box_'):
             i.setAttribute(55, 1)
             i.close()
 

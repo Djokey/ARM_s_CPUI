@@ -5,7 +5,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         # Jobs in Main
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(932, 556)
+        MainWindow.resize(932, 885)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("D:\\Projects\\ARM_s_CPUI\\interface\\../sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
@@ -62,6 +62,7 @@ class Ui_MainWindow(object):
         self.pushButton_headers_roster.setFont(font)
         self.pushButton_headers_roster.setObjectName("pushButton_headers_roster")
         self.gL_roster.addWidget(self.pushButton_headers_roster, 2, 2, 1, 1)
+
         self.pushButton_students_roster = QtWidgets.QPushButton(self.widget_roster)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -74,6 +75,7 @@ class Ui_MainWindow(object):
         self.pushButton_students_roster.setFont(font)
         self.pushButton_students_roster.setObjectName("pushButton_students_roster")
         self.gL_roster.addWidget(self.pushButton_students_roster, 1, 1, 1, 1)
+
         self.pushButton_subjects_roster = QtWidgets.QPushButton(self.widget_roster)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -86,6 +88,7 @@ class Ui_MainWindow(object):
         self.pushButton_subjects_roster.setFont(font)
         self.pushButton_subjects_roster.setObjectName("pushButton_subjects_roster")
         self.gL_roster.addWidget(self.pushButton_subjects_roster, 2, 1, 1, 1)
+
         self.pushButton_programs_roster = QtWidgets.QPushButton(self.widget_roster)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -98,6 +101,7 @@ class Ui_MainWindow(object):
         self.pushButton_programs_roster.setFont(font)
         self.pushButton_programs_roster.setObjectName("pushButton_programs_roster")
         self.gL_roster.addWidget(self.pushButton_programs_roster, 1, 2, 1, 1)
+
         self.pushButton_teachers_roster = QtWidgets.QPushButton(self.widget_roster)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -122,6 +126,7 @@ class Ui_MainWindow(object):
         self.pushButton_groups_roster.setFont(font)
         self.pushButton_groups_roster.setObjectName("pushButton_groups_roster")
         self.gL_roster.addWidget(self.pushButton_groups_roster, 0, 1, 1, 1)
+
         self.pushButton_enrollment_roster = QtWidgets.QPushButton(self.widget_roster)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -134,6 +139,20 @@ class Ui_MainWindow(object):
         self.pushButton_enrollment_roster.setFont(font)
         self.pushButton_enrollment_roster.setObjectName("pushButton_enrollment_roster")
         self.gL_roster.addWidget(self.pushButton_enrollment_roster, 3, 2, 1, 1)
+
+        self.pushButton_outlay = QtWidgets.QPushButton(self.widget_roster)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_outlay.sizePolicy().hasHeightForWidth())
+        self.pushButton_outlay.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setFamily("MS Shell Dlg 2")
+        font.setPointSize(20)
+        self.pushButton_outlay.setFont(font)
+        self.pushButton_outlay.setObjectName("pushButton_outlay")
+        self.gL_roster.addWidget(self.pushButton_outlay, 3, 1, 1, 1)
+
         self.hL_widget_roster_editors.addWidget(self.widget_roster)
         self.vL_tab_roster.addWidget(self.widget_roster_editors)
         self.tabWidget_Main.addTab(self.tab_roster, "")
@@ -349,6 +368,7 @@ class Ui_MainWindow(object):
         self.pushButton_subjects_roster.setText(_translate("MainWindow", "Предметы"))
         self.pushButton_programs_roster.setText(_translate("MainWindow", "Образовательные программы"))
         self.pushButton_teachers_roster.setText(_translate("MainWindow", "Преподаватели"))
+        self.pushButton_outlay.setText(_translate("MainWindow", "Калькулятор Сметы"))
         self.pushButton_groups_roster.setText(_translate("MainWindow", "Группы"))
         self.pushButton_enrollment_roster.setText(_translate("MainWindow", "Зачисления"))
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(self.tab_roster), _translate("MainWindow", "Реестр"))
