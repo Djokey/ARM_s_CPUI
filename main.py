@@ -1,6 +1,12 @@
 import copy
 import threading
 import time
+import sys
+import os
+import win32api
+import win32print
+import datetime
+import docx
 
 from ui import *
 from headers_ui import *
@@ -12,15 +18,10 @@ from students_ui import *
 from enrollment_ui import *
 from outlay_ui import *
 from timetable_edit_ui import *
+from outlay_printer_ui import *
 from arm_db import *
-import sys
-import os
-import win32api
-import win32print
-import datetime
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtCore, QtGui, QtWidgets
-import docx
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.table import _Cell
@@ -81,6 +82,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ttable_selected_sub = ''
         self.ttable_list = []
+
+        self.outlay_printer = QtWidgets.QDialog(self)
+        self.outpr_ui = Ui_OutlayPrinter()
+        self.outpr_ui.setupUi(self.outlay_printer)
+        self.outlay_printer.setWindowTitle('Редактор сметы')
+        self.outlay_data = []
 
         self.disk_dir = os.getenv("SystemDrive")
         self.user = os.environ.get("USERNAME")
@@ -187,18 +194,18 @@ class MainWindow(QtWidgets.QMainWindow):
             for i in timetable_list:
                 if i.objectName().startswith("clb_"):
                     if i.isChecked():
-                        sent_to_print_timetable(i.objectName().split("_")[-1])
+                        create_timetable(i.objectName().split("_")[-1])
                         _set_doc_warning = 0
                         break
                     else:
                         _set_doc_warning = 1
             if _set_doc_warning:
-                set_doc_warning("Ошибка (не выбрано расписание для печати)",
-                                'Сначала выберите расписание для печати.\n\nНажмите на нужное расписание, '
-                                'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
+                set_doc_warning("Ошибка (не выбрано расписание для сохранения)",
+                                'Сначала выберите расписание для сохранения.\n\nНажмите на нужное расписание, '
+                                'чтобы выбрать его, а потом нажмите на кнопку "Сохранить как документ"')
             else:
                 set_doc_warning("Отправлено",
-                                'Документ будет сохранен на рабочий стол и отправлен на печать.')
+                                'Документ будет сохранен в прочие документы.')
 
         # But for notes
         def headers_control_db(type_post):
@@ -301,9 +308,15 @@ class MainWindow(QtWidgets.QMainWindow):
                     _db = ARMDataBase()
                     _sql = "UPDATE programs SET " \
                            "prog_name = '{0}', " \
-                           "prog_range = '{1}' " \
-                           "WHERE id_prog = '{2}'".format(self.prog_ui.textEdit_prog_name.toPlainText(),
+                           "prog_range = '{1}', " \
+                           "prog_range_dates = '{2}' " \
+                           "WHERE id_prog = '{3}'".format(self.prog_ui.textEdit_prog_name.toPlainText(),
                                                           self.prog_ui.textEdit_prog_range.toPlainText(),
+                                                          self.prog_ui.dateEdit_start_program.date().
+                                                          toString('dd.MM.yyyy')
+                                                          + "|" +
+                                                          self.prog_ui.dateEdit_end_program.date().
+                                                          toString('dd.MM.yyyy'),
                                                           programs_selected)
                     _db.query(_sql)
                     _db.close()
@@ -313,8 +326,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 _sql = "INSERT INTO programs VALUES(" \
                        "NULL," \
                        "'{0}'," \
-                       "'{1}')".format(self.prog_ui.textEdit_prog_name.toPlainText(),
-                                       self.prog_ui.textEdit_prog_range.toPlainText())
+                       "'{1}'," \
+                       "'{2}')".format(self.prog_ui.textEdit_prog_name.toPlainText(),
+                                       self.prog_ui.textEdit_prog_range.toPlainText(),
+                                       self.prog_ui.dateEdit_start_program.date().
+                                       toString('dd.MM.yyyy')
+                                       + "|" +
+                                       self.prog_ui.dateEdit_end_program.date().
+                                       toString('dd.MM.yyyy'))
                 _db.query(_sql)
                 _db.close()
                 self.load_db_programs()
@@ -336,6 +355,18 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Удалить выбранную запись"')
                 else:
                     _db = ARMDataBase()
+                    _sql = "SELECT id_group FROM groups WHERE id_prog=" + programs_selected
+                    groups = _db.query(_sql)
+                    for group in groups:
+                        _sql = "SELECT id_student FROM students WHERE id_group=" + groups_selected
+                        studs = _db.query(_sql)
+                        for stud in studs:
+                            _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + stud[0]
+                            _db.query(_sql)
+                    _sql = "UPDATE groups SET id_prog='8' WHERE id_prog=" + programs_selected
+                    _db.query(_sql)
+                    _sql = "UPDATE subjects SET id_prog='8' WHERE id_prog=" + programs_selected
+                    _db.query(_sql)
                     _sql = "DELETE FROM programs WHERE id_prog={0}".format(programs_selected)
                     _db.query(_sql)
                     _db.close()
@@ -439,6 +470,14 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Сохранить в выбранную запись"')
                 else:
                     _db = ARMDataBase()
+                    _sql = "SELECT id_prog FROM groups WHERE id_group=" + groups_selected
+                    prog_checker = str(_db.query(_sql)[0][0])
+                    if prog_checker != str(self.groups_ui.comboBox_groups_prog.currentData()):
+                        _sql = "SELECT id_student FROM students WHERE id_group=" + groups_selected
+                        studs = _db.query(_sql)
+                        for stud in studs:
+                            _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + stud[0]
+                            _db.query(_sql)
                     _sql = "UPDATE groups SET " \
                            "group_name = '{0}', " \
                            "class = '{1}', " \
@@ -480,6 +519,13 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Удалить выбранную запись"')
                 else:
                     _db = ARMDataBase()
+                    _sql = "SELECT id_student FROM students WHERE id_group=" + groups_selected
+                    studs = _db.query(_sql)
+                    for stud in studs:
+                        _sql = "UPDATE students SET id_group='1' WHERE id_student=" + stud[0]
+                        _db.query(_sql)
+                        _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + stud[0]
+                        _db.query(_sql)
                     _sql = "DELETE FROM groups WHERE id_group={0}".format(groups_selected)
                     _db.query(_sql)
                     _db.close()
@@ -507,6 +553,11 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Сохранить в выбранную запись"')
                 else:
                     _db = ARMDataBase()
+                    _sql = "SELECT id_prog FROM subjects WHERE id_sub=" + subjects_selected
+                    prog_checker = str(_db.query(_sql)[0][0])
+                    if prog_checker != str(self.sub_ui.comboBox_sub_prog.currentData()):
+                        _sql = "UPDATE subs_in_studs SET status='0' WHERE id_sub=" + subjects_selected
+                        _db.query(_sql)
                     _sql = "UPDATE subjects SET " \
                            "sub_name = '{0}', " \
                            "sub_price_hour = '{1}', " \
@@ -562,7 +613,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Удалить выбранную запись"')
                 else:
                     _db = ARMDataBase()
-                    _sql = "DELETE FROM subjects WHERE id_sub={0}".format(subjects_selected)
+                    _sql = "DELETE FROM subs_in_studs WHERE id_sub=" + subjects_selected
+                    _db.query(_sql)
+                    _sql = "DELETE FROM subjects WHERE id_sub=" + subjects_selected
                     _db.query(_sql)
                     _db.close()
                     self.load_db_subjects()
@@ -588,8 +641,13 @@ class MainWindow(QtWidgets.QMainWindow):
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
                                     '"Сохранить в выбранную запись"')
                 else:
-                    gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
                     _db = ARMDataBase()
+                    gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
+                    _sql = "SELECT id_group FROM students WHERE id_student=" + students_selected
+                    group_checker = str(_db.query(_sql)[0][0])
+                    if group_checker != str(self.stud_ui.comboBox_stud_group.currentData()):
+                        _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + students_selected
+                        _db.query(_sql)
                     _sql = "UPDATE students SET " \
                            "student_name = '{0}', " \
                            "id_group = '{1}', " \
@@ -658,6 +716,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Удалить выбранную запись"')
                 else:
                     _db = ARMDataBase()
+                    _sql = "DELETE FROM subs_in_studs WHERE id_student=" + students_selected
+                    _db.query(_sql)
                     _sql = "DELETE FROM students WHERE id_student={0}".format(students_selected)
                     _db.query(_sql)
                     _db.close()
@@ -756,8 +816,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 _db = ARMDataBase()
                 _sql = "SELECT id_sub FROM subjects WHERE id_prog=" + str(self.outlay_ui.comboBox_progs.currentData())
                 subs = _db.query(_sql)
-                self.outlay_ui.widget_col_subs.findChild(QtWidgets.QRadioButton,
-                                                         "radio_col_" + str(len(subs))).setChecked(True)
+                try:
+                    self.outlay_ui.widget_col_subs.findChild(QtWidgets.QRadioButton,
+                                                             "radio_col_" + str(len(subs))).setChecked(True)
+                except Exception:
+                    pass
                 _db.close()
                 a = 0
                 b = 0
@@ -877,10 +940,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.outlay_ui.pushButton_outlay_back.clicked.connect(lambda: outlay_back())
         self.outlay_ui.comboBox_progs.currentIndexChanged.connect(lambda: outlay_control_db())
+        self.outlay_ui.pushButton_outlay_next.clicked.connect(lambda: self.outlay_printer_exec())
         self.outlay_ui.radio_col_1.clicked.connect(lambda: outlay_control_db())
         self.outlay_ui.radio_col_2.clicked.connect(lambda: outlay_control_db())
         self.outlay_ui.radio_col_3.clicked.connect(lambda: outlay_control_db())
         self.outlay_ui.radio_col_4.clicked.connect(lambda: outlay_control_db())
+        self.outpr_ui.pushButton_save_doc.clicked.connect(lambda: create_outlay_doc(self.outlay_data))
 
     # END BUTTONS
 
@@ -916,6 +981,7 @@ class MainWindow(QtWidgets.QMainWindow):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ttable.setWindowIcon(icon)
+        self.outlay_printer.setWindowIcon(icon)
 
     # create_list_el('Здесь objectName для кнопки',
     #                     'Здесь текст, который будет показан',
@@ -1052,12 +1118,16 @@ class MainWindow(QtWidgets.QMainWindow):
             heads[4] = 'Социальные сети: ' + heads[4] + '\n' if heads[4] is not None and heads[4] != '' else ''
             heads[5] = 'Должность: ' + heads[5] + '\n' if heads[5] is not None and heads[5] != '' else ''
             searcher = ''
-            _search_text = search_text
+            if search_text is None or search_text == "":
+                _search_text = self.head_ui.lineEdit_search_headers.text().lower()
+            elif search_text is not None:
+                _search_text = search_text.lower()
+            else:
+                _search_text = search_text
             for h in heads:
                 if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
-                _search_text = search_text.lower()
                 if _search_text in searcher:
                     head_but = self.create_list_el(heads[0],
                                                    heads[1] + heads[5] + heads[2] + heads[3] + heads[4],
@@ -1090,11 +1160,13 @@ class MainWindow(QtWidgets.QMainWindow):
             _db1.close()
             self.prog_ui.textEdit_prog_name.setText(_prog[0][1])
             self.prog_ui.textEdit_prog_range.setText(_prog[0][2])
-
-            if _prog[0][2] is not None and _prog[0][2] != '':
-                self.head_ui.textEdit_headers_phone.setText(_prog[0][2])
-            else:
-                self.head_ui.textEdit_headers_phone.setText('')
+            dates = _prog[0][3].split("|")
+            self.prog_ui.dateEdit_start_program.setDate(datetime.date(int(dates[0].split('.')[2]),
+                                                                      int(dates[0].split('.')[1]),
+                                                                      int(dates[0].split('.')[0])))
+            self.prog_ui.dateEdit_end_program.setDate(datetime.date(int(dates[1].split('.')[2]),
+                                                                    int(dates[1].split('.')[1]),
+                                                                    int(dates[1].split('.')[0])))
 
         _db = ARMDataBase()
         _sql = "SELECT * FROM programs"
@@ -1105,28 +1177,34 @@ class MainWindow(QtWidgets.QMainWindow):
             progs = []
             for h in programs[i]:
                 progs.append(h)
-            prog_loader.append(str(progs[0])[:])
-            progs[0] = 'clb_prog_' + str(progs[0])
-            progs[1] = 'Программа: ' + progs[1] + '\n'
-            progs[2] = 'Продолжительность: в течении ' + progs[2] + ' месяцев\n' if progs[2] is not None and progs[
-                2] != '' else ''
-            searcher = ''
-            _search_text = search_text
-            for h in progs:
-                if h is not None and h != '':
-                    searcher = searcher + h.lower()
-            if _search_text is not None and _search_text != '':
-                _search_text = search_text.lower()
-                if _search_text in searcher:
+            if str(progs[0]) != "8":
+                prog_loader.append(str(progs[0])[:])
+                progs[0] = 'clb_prog_' + str(progs[0])
+                progs[1] = 'Программа: ' + progs[1] + '\n'
+                progs[2] = 'Продолжительность: в течении ' + progs[2] + ' месяцев\n' if progs[2] is not None and progs[
+                    2] != '' else ''
+                progs[3] = 'Даты проведения: с ' + progs[3].split("|")[0] + " по " + progs[3].split("|")[1] + '\n'
+                searcher = ''
+                if search_text is None or search_text == "":
+                    _search_text = self.prog_ui.lineEdit_search_programs.text().lower()
+                elif search_text is not None:
+                    _search_text = search_text.lower()
+                else:
+                    _search_text = search_text
+                for h in progs:
+                    if h is not None and h != '':
+                        searcher = searcher + h.lower()
+                if _search_text is not None and _search_text != '':
+                    if _search_text in searcher:
+                        prog_but = self.create_list_el(progs[0],
+                                                       progs[1] + progs[2] + progs[3],
+                                                       self.prog_ui.sAWContent_programs_list)
+                        prog_but.clicked.connect(lambda: loader_programs_edits())
+                else:
                     prog_but = self.create_list_el(progs[0],
-                                                   progs[1] + progs[2],
+                                                   progs[1] + progs[2] + progs[3],
                                                    self.prog_ui.sAWContent_programs_list)
                     prog_but.clicked.connect(lambda: loader_programs_edits())
-            else:
-                prog_but = self.create_list_el(progs[0],
-                                               progs[1] + progs[2],
-                                               self.prog_ui.sAWContent_programs_list)
-                prog_but.clicked.connect(lambda: loader_programs_edits())
 
     # Loader database for teachers
     def load_db_teachers(self, search_text=None):
@@ -1182,12 +1260,16 @@ class MainWindow(QtWidgets.QMainWindow):
             teachs[4] = 'Социальные сети: ' + teachs[4] + '\n' if teachs[4] is not None and teachs[4] != '' else ''
             teachs[5] = 'Должность: ' + teachs[5] + '\n' if teachs[5] is not None and teachs[5] != '' else ''
             searcher = ''
-            _search_text = search_text
+            if search_text is None or search_text == "":
+                _search_text = self.teach_ui.lineEdit_search_teachers.text().lower()
+            elif search_text is not None:
+                _search_text = search_text.lower()
+            else:
+                _search_text = search_text
             for h in teachs:
                 if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
-                _search_text = search_text.lower()
                 if _search_text in searcher:
                     teach_but = self.create_list_el(teachs[0],
                                                     teachs[1] + teachs[5] + teachs[2] + teachs[3] + teachs[4],
@@ -1250,22 +1332,27 @@ class MainWindow(QtWidgets.QMainWindow):
             grps[3] = 'Программа: ' + group_prog[0][0] + '\n' if group_prog[0][0] is not None and group_prog[0][
                 0] != '' else ''
             searcher = ''
-            _search_text = search_text
+            if search_text is None or search_text == "":
+                _search_text = self.groups_ui.lineEdit_search_groups.text().lower()
+            elif search_text is not None:
+                _search_text = search_text.lower()
+            else:
+                _search_text = search_text
             for h in grps:
                 if h is not None and h != '':
                     searcher = searcher + h.lower()
-            if _search_text is not None and _search_text != '':
-                _search_text = search_text.lower()
-                if _search_text in searcher:
+            if grps[0].split("_")[-1] != "1":
+                if _search_text is not None and _search_text != '':
+                    if _search_text in searcher:
+                        grp_but = self.create_list_el(grps[0],
+                                                      grps[2] + grps[3] + grps[1],
+                                                      self.groups_ui.sAWContent_groups_list)
+                        grp_but.clicked.connect(lambda: loader_groups_edits())
+                else:
                     grp_but = self.create_list_el(grps[0],
                                                   grps[2] + grps[3] + grps[1],
                                                   self.groups_ui.sAWContent_groups_list)
                     grp_but.clicked.connect(lambda: loader_groups_edits())
-            else:
-                grp_but = self.create_list_el(grps[0],
-                                              grps[2] + grps[3] + grps[1],
-                                              self.groups_ui.sAWContent_groups_list)
-                grp_but.clicked.connect(lambda: loader_groups_edits())
         _db.close()
 
         _db = ARMDataBase()
@@ -1336,12 +1423,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 0] != '' else ''
             subs[8] = 'Всего часов: ' + subs[8] + '\n' if subs[8] is not None and subs[8] != '' else ''
             searcher = ''
-            _search_text = search_text
+            if search_text is None or search_text == "":
+                _search_text = self.sub_ui.lineEdit_search_sub.text().lower()
+            elif search_text is not None:
+                _search_text = search_text.lower()
+            else:
+                _search_text = search_text
             for h in subs:
                 if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
-                _search_text = search_text.lower()
                 if _search_text in searcher:
                     sub_but = self.create_list_el(subs[0],
                                                   subs[1] + subs[2] + subs[3] + subs[4] + subs[5] + subs[8],
@@ -1429,6 +1520,11 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 stud_group = [['']]
 
+            if studs[5] == "male":
+                studs[5] = "Мужской"
+            else:
+                studs[5] = "Женский"
+
             studs[0] = 'clb_stud_' + str(studs[0])
             studs[1] = 'ФИО: ' + studs[1] + '\n' if studs[1] is not None and studs[1] != '' else ''
             studs[2] = 'Группа: ' + stud_group[0][0] + '\n' if stud_group[0][0] is not None and stud_group[0][
@@ -1441,12 +1537,16 @@ class MainWindow(QtWidgets.QMainWindow):
             studs[8] = 'Электронная почта: ' + studs[8] + '\n' if studs[8] is not None and studs[8] != '' else ''
             studs[9] = 'Социальные сети: ' + studs[9] + '\n' if studs[9] is not None and studs[9] != '' else ''
             searcher = ''
-            _search_text = search_text
+            if search_text is None or search_text == "":
+                _search_text = self.stud_ui.lineEdit_search_stud.text().lower()
+            elif search_text is not None:
+                _search_text = search_text.lower()
+            else:
+                _search_text = search_text
             for h in studs:
                 if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
-                _search_text = search_text.lower()
                 if _search_text in searcher:
                     stud_but = self.create_list_el(studs[0],
                                                    studs[1] + studs[2] + studs[3] + studs[4] + studs[5] + studs[6] +
@@ -1605,12 +1705,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 5] = 'Предметы: ' + subjects + '\n' if subjects is not None and subjects != '' else 'Предметы: Отсутствуют\n'
 
             searcher = ''
-            _search_text = search_text
+            if search_text is None or search_text == "":
+                _search_text = self.enr_ui.lineEdit_search_enr.text().lower()
+            elif search_text is not None:
+                _search_text = search_text.lower()
+            else:
+                _search_text = search_text
             for h in studs:
                 if h is not None and h != '':
                     searcher = searcher + h.lower()
             if _search_text is not None and _search_text != '':
-                _search_text = search_text.lower()
                 if _search_text in searcher:
                     stud_but = self.create_list_el(studs[0],
                                                    studs[1] + studs[2] + studs[3] + studs[4] + studs[5],
@@ -1633,7 +1737,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_ui.comboBox_progs.clear()
         self.create_combo_box_el(self.outlay_ui.comboBox_progs, "None", "Отсутствует")
         for prog in programs:
-            self.create_combo_box_el(self.outlay_ui.comboBox_progs, prog[0], str(prog[1]))
+            if str(prog[0]) != "8":
+                self.create_combo_box_el(self.outlay_ui.comboBox_progs, prog[0], str(prog[1]))
         clear_widget(self.outlay_ui.widget_calcs.children())
 
         self.outlay_ui.radio_col_1.setChecked(True)
@@ -1683,6 +1788,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             datetime.datetime.fromtimestamp(float(date_.objectName().split("_")[-1])))
                         break
 
+        self.ttable_list = []
         clear_list(self.ttable_ui.sAWContent_hours_list.children())
         _db = ARMDataBase()
         _sql = "SELECT sub_ttable, sub_hours FROM subjects WHERE id_sub=" + self.ttable_selected_sub
@@ -1825,6 +1931,133 @@ class MainWindow(QtWidgets.QMainWindow):
             self.load_db_timetable_list()
             self.ttable.exec_()
 
+    # Loader database for exe_OutlayPrinter
+    def load_db_outlay_printer(self):
+        def setup_prog_info():
+            # lEdit for class load
+            _db1 = ARMDataBase()
+            try:
+                _sql = "SELECT class FROM groups WHERE id_prog=" + str(self.outpr_ui.comboBox_prog.currentData())
+                group_class = _db1.query(_sql)
+                self.outpr_ui.lEdit_class.setText(group_class[0][0])
+            except Exception:
+                self.outpr_ui.lEdit_class.setText("10")
+            try:
+                _sql = "SELECT prog_range_dates FROM programs WHERE id_prog=" + str(self.outpr_ui.comboBox_prog.currentData())
+                dates = _db1.query(_sql)[0][0].split("|")
+                self.outpr_ui.dateEdit_date_start.setDate(datetime.date(int(dates[0].split('.')[2]),
+                                                                          int(dates[0].split('.')[1]),
+                                                                          int(dates[0].split('.')[0])))
+                self.outpr_ui.dateEdit_date_end.setDate(datetime.date(int(dates[1].split('.')[2]),
+                                                                        int(dates[1].split('.')[1]),
+                                                                        int(dates[1].split('.')[0])))
+            except Exception:
+                pass
+            _db1.close()
+
+        if self.outlay_ui.comboBox_progs.currentData() == "None" or self.outlay_ui.comboBox_progs.currentData() is None:
+            selected = False
+        else:
+            selected = True
+
+        self.outpr_ui.comboBox_head.clear()
+        self.outpr_ui.comboBox_prog.clear()
+        self.outpr_ui.lEdit_class.setText("")
+        self.outpr_ui.comboBox_pfs.clear()
+        self.outpr_ui.comboBox_bookkeeper.clear()
+        self.outpr_ui.comboBox_manager_cpui.clear()
+        clear_widget(self.outpr_ui.widget_subs_teachs.children())
+        _db = ARMDataBase()
+
+        # comboBox for Head load
+        _sql = "SELECT id_head, head_name, head_prof FROM headers"
+        headers = _db.query(_sql)
+        for head in headers:
+            self.create_combo_box_el(self.outpr_ui.comboBox_head, head[0], str(head[2]) + " | " + str(head[1]))
+            if "директор хти" in str(head[2]).lower():
+                self.outpr_ui.comboBox_head.setCurrentIndex(
+                    self.outpr_ui.comboBox_head.findData(head[0]))
+
+        # DateEdit for Date Confirm
+        self.outpr_ui.dateEdit_date_confirm.setDate(datetime.datetime.today())
+
+        # comboBox for Programs load
+        _sql = "SELECT id_prog, prog_name, prog_range_dates FROM programs"
+        programs = _db.query(_sql)
+        for prog in programs:
+            self.create_combo_box_el(self.outpr_ui.comboBox_prog, prog[0], str(prog[1]))
+        if selected:
+            self.outpr_ui.comboBox_prog.setCurrentIndex(
+                self.outpr_ui.comboBox_prog.findData(
+                    self.outlay_ui.comboBox_progs.currentData()
+                ))
+        self.outpr_ui.comboBox_prog.currentIndexChanged.connect(lambda: setup_prog_info())
+        setup_prog_info()
+
+        # comboBox for PFS load
+        for head in headers:
+            self.create_combo_box_el(self.outpr_ui.comboBox_pfs, head[0], str(head[2]) + " | " + str(head[1]))
+            if "пфс" in str(head[2]).lower():
+                self.outpr_ui.comboBox_pfs.setCurrentIndex(
+                    self.outpr_ui.comboBox_pfs.findData(head[0]))
+
+        # comboBox for Bookkeeper load
+        for head in headers:
+            self.create_combo_box_el(self.outpr_ui.comboBox_bookkeeper, head[0], str(head[2]) + " | " + str(head[1]))
+            if "бухгалтер" in str(head[2]).lower():
+                self.outpr_ui.comboBox_bookkeeper.setCurrentIndex(
+                    self.outpr_ui.comboBox_bookkeeper.findData(head[0]))
+
+        # comboBox for manager CPUI load
+        for head in headers:
+            self.create_combo_box_el(self.outpr_ui.comboBox_manager_cpui, head[0], str(head[2]) + " | " + str(head[1]))
+            if "цпюи" in str(head[2]).lower():
+                self.outpr_ui.comboBox_manager_cpui.setCurrentIndex(
+                    self.outpr_ui.comboBox_manager_cpui.findData(head[0]))
+
+        # Widgets for subs and teachers load
+        if not selected:
+            rb = 0
+            if self.outlay_ui.radio_col_1.isChecked():
+                rb = 1
+            elif self.outlay_ui.radio_col_2.isChecked():
+                rb = 2
+            elif self.outlay_ui.radio_col_3.isChecked():
+                rb = 3
+            elif self.outlay_ui.radio_col_4.isChecked():
+                rb = 4
+            for r in range(rb):
+                if r + 1 == 1:
+                    self.add_sub_teach_box(False, str(r + 1), 0, 0)
+                elif r + 1 == 2:
+                    self.add_sub_teach_box(False, str(r + 1), 1, 0)
+                elif r + 1 == 3:
+                    self.add_sub_teach_box(False, str(r + 1), 0, 1)
+                elif r + 1 == 4:
+                    self.add_sub_teach_box(False, str(r + 1), 1, 1)
+        else:
+            _sql = "SELECT id_sub FROM subjects WHERE id_prog=" + str(self.outlay_ui.comboBox_progs.currentData())
+            subs = _db.query(_sql)
+            a = 0
+            b = 0
+            for i in subs:
+                self.add_sub_teach_box(True, str(i[0]), a, b)
+                if a == 0 and b == 0:
+                    a = 1
+                    b = 0
+                elif a == 1 and b == 0:
+                    a = 0
+                    b = 1
+                elif a == 0 and b == 1:
+                    a = 1
+                    b = 1
+
+        _db.close()
+
+    def outlay_printer_exec(self):
+        self.load_db_outlay_printer()
+        self.outlay_printer.exec_()
+
     def select_list_el(self):
         if self.ttable_ui.sAWContent_hours_list.findChild(
                 QtWidgets.QCommandLinkButton, "clb_" +
@@ -1840,10 +2073,10 @@ class MainWindow(QtWidgets.QMainWindow):
             ).setChecked(1)
 
     def add_calculate_box(self, sel_sub=False, id_sub="", i=0, j=0):
-        calc_box = QtWidgets.QGroupBox(self.outlay_ui.widget_calcs)
-        calc_box.setObjectName("calc_box_" + id_sub)
-        gL_calc_box = QtWidgets.QGridLayout(calc_box)
-        gL_calc_box.setObjectName("gL_calc_box_" + id_sub)
+        widget_calcbox = QtWidgets.QGroupBox(self.outlay_ui.widget_calcs)
+        widget_calcbox.setObjectName("widget_calcbox_" + id_sub)
+        gL_widget_calcbox = QtWidgets.QGridLayout(widget_calcbox)
+        gL_widget_calcbox.setObjectName("gL_widget_calcbox_" + id_sub)
         studs_col = [['0']]
 
         if sel_sub:
@@ -1851,77 +2084,77 @@ class MainWindow(QtWidgets.QMainWindow):
             _sql = "SELECT sub_name, sub_price_hour, sub_price_month, sub_hours_need FROM subjects WHERE id_sub=" + id_sub
             sub_info = _db.query(_sql)
 
-            calc_box.setTitle(sub_info[0][0])
+            widget_calcbox.setTitle(sub_info[0][0])
 
-            _sql = "SELECT COUNT(*) FROM subs_in_studs WHERE id_sub=" + id_sub
+            _sql = "SELECT COUNT(*) FROM subs_in_studs WHERE id_sub={0} AND status=1".format(id_sub)
             studs_col = _db.query(_sql)
 
             _db.close()
         else:
-            calc_box.setTitle("Предмет " + id_sub)
+            widget_calcbox.setTitle("Предмет " + id_sub)
 
-        lab_studs = QtWidgets.QLabel(calc_box)
+        lab_studs = QtWidgets.QLabel(widget_calcbox)
         lab_studs.setObjectName("lab_studs_" + id_sub)
         lab_studs.setText(self._translate("Outlay", "Слушатели: "))
-        gL_calc_box.addWidget(lab_studs, 1, 0)
+        gL_widget_calcbox.addWidget(lab_studs, 1, 0)
 
-        check_auto = QtWidgets.QCheckBox(calc_box)
+        check_auto = QtWidgets.QCheckBox(widget_calcbox)
         check_auto.setObjectName("check_auto_" + id_sub)
         check_auto.setChecked(True)
         check_auto.setText(self._translate("Outlay", "Автоматически"))
-        gL_calc_box.addWidget(check_auto, 0, 2)
+        gL_widget_calcbox.addWidget(check_auto, 0, 2)
 
-        spin_studs = QtWidgets.QSpinBox(calc_box)
+        spin_studs = QtWidgets.QSpinBox(widget_calcbox)
         spin_studs.setObjectName("spin_studs_" + id_sub)
         spin_studs.setMaximum(100000)
         spin_studs.setSingleStep(1)
-        gL_calc_box.addWidget(spin_studs, 1, 1)
+        gL_widget_calcbox.addWidget(spin_studs, 1, 1)
 
-        radio_variability_studs = QtWidgets.QRadioButton(calc_box)
+        radio_variability_studs = QtWidgets.QRadioButton(widget_calcbox)
         radio_variability_studs.setObjectName("radio_variability_studs_" + id_sub)
-        gL_calc_box.addWidget(radio_variability_studs, 1, 2)
+        gL_widget_calcbox.addWidget(radio_variability_studs, 1, 2)
 
-        lab_price = QtWidgets.QLabel(calc_box)
+        lab_price = QtWidgets.QLabel(widget_calcbox)
         lab_price.setObjectName("lab_price_" + id_sub)
         lab_price.setText(self._translate("Outlay", "Стоимость: "))
-        gL_calc_box.addWidget(lab_price, 2, 0)
+        gL_widget_calcbox.addWidget(lab_price, 2, 0)
 
-        spin_price = QtWidgets.QSpinBox(calc_box)
+        spin_price = QtWidgets.QSpinBox(widget_calcbox)
         spin_price.setObjectName("spin_price_" + id_sub)
         spin_price.setMaximum(1000000000)
         spin_price.setSingleStep(100)
-        gL_calc_box.addWidget(spin_price, 2, 1)
+        gL_widget_calcbox.addWidget(spin_price, 2, 1)
 
-        radio_variability_price = QtWidgets.QRadioButton(calc_box)
+        radio_variability_price = QtWidgets.QRadioButton(widget_calcbox)
         radio_variability_price.setObjectName("radio_variability_price_" + id_sub)
         radio_variability_price.setChecked(True)
-        gL_calc_box.addWidget(radio_variability_price, 2, 2)
+        gL_widget_calcbox.addWidget(radio_variability_price, 2, 2)
 
-        lab_tax = QtWidgets.QLabel(calc_box)
+        lab_tax = QtWidgets.QLabel(widget_calcbox)
         lab_tax.setObjectName("lab_tax_" + id_sub)
         lab_tax.setText(self._translate("Outlay", "Часовая стоимость: "))
-        gL_calc_box.addWidget(lab_tax, 3, 0)
+        gL_widget_calcbox.addWidget(lab_tax, 3, 0)
 
-        spin_tax = QtWidgets.QSpinBox(calc_box)
+        spin_tax = QtWidgets.QSpinBox(widget_calcbox)
         spin_tax.setObjectName("spin_tax_" + id_sub)
         spin_tax.setMaximum(1000000000)
         spin_tax.setSingleStep(50)
-        gL_calc_box.addWidget(spin_tax, 3, 1)
+        gL_widget_calcbox.addWidget(spin_tax, 3, 1)
 
-        radio_variability_tax = QtWidgets.QRadioButton(calc_box)
+        radio_variability_tax = QtWidgets.QRadioButton(widget_calcbox)
         radio_variability_tax.setObjectName("radio_variability_tax_" + id_sub)
-        gL_calc_box.addWidget(radio_variability_tax, 3, 2)
+        gL_widget_calcbox.addWidget(radio_variability_tax, 3, 2)
 
-        lab_hours = QtWidgets.QLabel(calc_box)
+        lab_hours = QtWidgets.QLabel(widget_calcbox)
         lab_hours.setObjectName("lab_hours_" + id_sub)
         lab_hours.setText(self._translate("Outlay", "Часы: "))
-        gL_calc_box.addWidget(lab_hours, 4, 0)
+        gL_widget_calcbox.addWidget(lab_hours, 4, 0)
 
-        spin_hours = QtWidgets.QSpinBox(calc_box)
+        spin_hours = QtWidgets.QSpinBox(widget_calcbox)
         spin_hours.setObjectName("spin_hours_" + id_sub)
         spin_hours.setMaximum(1000)
         spin_hours.setSingleStep(2)
-        gL_calc_box.addWidget(spin_hours, 4, 1)
+        gL_widget_calcbox.addWidget(spin_hours, 4, 1)
 
         spin_studs.valueChanged.connect(lambda: self.calculate_values())
         spin_hours.valueChanged.connect(lambda: self.calculate_values())
@@ -1935,14 +2168,60 @@ class MainWindow(QtWidgets.QMainWindow):
             spin_tax.setValue(int(sub_info[0][1]))
             spin_hours.setValue(int(sub_info[0][3]))
 
-        self.outlay_ui.gL_widget_calcs.addWidget(calc_box, i, j)
-        return calc_box
+        self.outlay_ui.gL_widget_calcs.addWidget(widget_calcbox, i, j)
+        return widget_calcbox
+
+    def add_sub_teach_box(self, sel_sub=False, id_sub="", i=0, j=0):
+        widget_sub_teach = QtWidgets.QWidget(self.outpr_ui.widget_subs_teachs)
+        widget_sub_teach.setObjectName("widget_sub_teach_" + id_sub)
+        gL_widget_sub_teach = QtWidgets.QGridLayout(widget_sub_teach)
+        gL_widget_sub_teach.setObjectName("gL_widget_sub_teach_" + id_sub)
+
+        lab_sub_name = QtWidgets.QLabel(widget_sub_teach)
+        lab_sub_name.setObjectName("lab_sub_name_" + id_sub)
+        if sel_sub:
+            lab_sub_name.setText(self._translate("OutlayPrinter", "Предмет: "))
+        else:
+            lab_sub_name.setText(self._translate("OutlayPrinter", "Предмет {}: ".format(id_sub)))
+        gL_widget_sub_teach.addWidget(lab_sub_name, 0, 0)
+
+        lEdit_sub_name = QtWidgets.QLineEdit(widget_sub_teach)
+        lEdit_sub_name.setObjectName("lEdit_sub_name_" + id_sub)
+        gL_widget_sub_teach.addWidget(lEdit_sub_name, 0, 1)
+
+        lab_teach_name = QtWidgets.QLabel(widget_sub_teach)
+        lab_teach_name.setObjectName("lab_teach_name_" + id_sub)
+        if sel_sub:
+            lab_teach_name.setText(self._translate("OutlayPrinter", "Преподаватель: "))
+        else:
+            lab_teach_name.setText(self._translate("OutlayPrinter", "Преподаватель {}: ".format(id_sub)))
+        gL_widget_sub_teach.addWidget(lab_teach_name, 1, 0)
+
+        lEdit_teach_name = QtWidgets.QLineEdit(widget_sub_teach)
+        lEdit_teach_name.setObjectName("lEdit_teach_name_" + id_sub)
+        gL_widget_sub_teach.addWidget(lEdit_teach_name, 1, 1)
+
+        if sel_sub:
+            _db = ARMDataBase()
+            _sql = "SELECT sub_name, id_teacher FROM subjects WHERE id_sub=" + id_sub
+            sub_info = _db.query(_sql)
+            lEdit_sub_name.setText(sub_info[0][0])
+
+            _sql = "SELECT teacher_name FROM teachers WHERE id_teacher=" + str(sub_info[0][1])
+            teach_info = _db.query(_sql)
+            lEdit_teach_name.setText(teach_info[0][0])
+
+            _db.close()
+
+        self.outpr_ui.gL_widget_subs_teachs.addWidget(widget_sub_teach, i, j)
+
+        return widget_sub_teach
 
     def save_calculate_values(self):
         i = 0
-        for calc_box in self.outlay_ui.widget_calcs.children():
-            if calc_box.objectName().startswith("calc_box_") and i < 4:
-                for child in calc_box.children():
+        for widget_calcbox in self.outlay_ui.widget_calcs.children():
+            if widget_calcbox.objectName().startswith("widget_calcbox_") and i < 4:
+                for child in widget_calcbox.children():
                     if child.objectName().startswith("spin_studs_"):
                         self.outlay_ui.variability_list[i][0] = child.value()
                     elif child.objectName().startswith("spin_price_"):
@@ -1964,12 +2243,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def load_calculate_values(self):
         i = 0
         j = 0
-        for calc_box in self.outlay_ui.widget_calcs.children():
-            if calc_box.objectName().startswith("calc_box_"):
+        for widget_calcbox in self.outlay_ui.widget_calcs.children():
+            if widget_calcbox.objectName().startswith("widget_calcbox_"):
                 if j < self.outlay_ui.calcs_before:
                     j += 1
                 else:
-                    for child in calc_box.children():
+                    for child in widget_calcbox.children():
                         if child.objectName().startswith("spin_studs_") and self.outlay_ui.variability_list[i][0] != "":
                             child.setValue(self.outlay_ui.variability_list[i][0])
                         elif child.objectName().startswith("spin_price_") and self.outlay_ui.variability_list[i][1] != "":
@@ -1993,39 +2272,39 @@ class MainWindow(QtWidgets.QMainWindow):
         profit = 0
         cost = 0
         i = 0
-        for calc_box in self.outlay_ui.widget_calcs.children():
-            if calc_box.objectName().startswith("calc_box_") and i < 4:
-                if calc_box.findChild(QtWidgets.QCheckBox, "check_auto_" + calc_box.objectName().split("_")[-1]).isChecked():
-                    for child in calc_box.children():
+        for widget_calcbox in self.outlay_ui.widget_calcs.children():
+            if widget_calcbox.objectName().startswith("widget_calcbox_") and i < 4:
+                if widget_calcbox.findChild(QtWidgets.QCheckBox, "check_auto_" + widget_calcbox.objectName().split("_")[-1]).isChecked():
+                    for child in widget_calcbox.children():
                         if child.objectName().startswith("radio_variability_tax_") \
                                 and child.isChecked() \
-                                and calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value() != 0:
-                            calc_box.findChild(QtWidgets.QSpinBox, "spin_tax_" + calc_box.objectName().split("_")[-1]).setValue(round(
+                                and widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value() != 0:
+                            widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_tax_" + widget_calcbox.objectName().split("_")[-1]).setValue(round(
                                 (1/2*
-                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).value() *
-                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).value()) /
-                                calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value()))
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).value() *
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).value()) /
+                                widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value()))
                         elif child.objectName().startswith("radio_variability_price_") \
                                 and child.isChecked() \
-                                and calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).value() != 0:
-                            calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).setValue(round(
+                                and widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).value() != 0:
+                            widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).setValue(round(
                                 (2*
-                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_tax_" + calc_box.objectName().split("_")[-1]).value() *
-                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value()) /
-                                calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).value()))
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_tax_" + widget_calcbox.objectName().split("_")[-1]).value() *
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value()) /
+                                widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).value()))
                         elif child.objectName().startswith("radio_variability_studs_") \
                                 and child.isChecked() \
-                                and calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).value() != 0:
-                            calc_box.findChild(QtWidgets.QSpinBox, "spin_studs_" + calc_box.objectName().split("_")[-1]).setValue(round(
+                                and widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).value() != 0:
+                            widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).setValue(round(
                                 (2*
-                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_hours_" + calc_box.objectName().split("_")[-1]).value() *
-                                 calc_box.findChild(QtWidgets.QSpinBox, "spin_tax_" + calc_box.objectName().split("_")[-1]).value()) /
-                                calc_box.findChild(QtWidgets.QSpinBox, "spin_price_" + calc_box.objectName().split("_")[-1]).value()))
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value() *
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_tax_" + widget_calcbox.objectName().split("_")[-1]).value()) /
+                                widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).value()))
                 i += 1
         i = 0
-        for calc_box in self.outlay_ui.widget_calcs.children():
-            if calc_box.objectName().startswith("calc_box_") and i < 4:
-                for child in calc_box.children():
+        for widget_calcbox in self.outlay_ui.widget_calcs.children():
+            if widget_calcbox.objectName().startswith("widget_calcbox_") and i < 4:
+                for child in widget_calcbox.children():
                     if child.objectName().startswith("spin_studs_"):
                         studs[i] = child.value()
                     elif child.objectName().startswith("spin_price_"):
@@ -2044,41 +2323,78 @@ class MainWindow(QtWidgets.QMainWindow):
             self.outlay_ui.label_otfot.setText("Оплата часов + ФОТ % = " + str(round(cost / profit * 100, 2)) + "%")
 
     def outlay_check_click(self):
-        for calc_box in self.outlay_ui.widget_calcs.children():
-            if calc_box.objectName().startswith("calc_box_"):
-                for child in calc_box.children():
+        for widget_calcbox in self.outlay_ui.widget_calcs.children():
+            if widget_calcbox.objectName().startswith("widget_calcbox_"):
+                for child in widget_calcbox.children():
                     if child.objectName().startswith("check_auto_") \
                             and child.isChecked():
-                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + calc_box.objectName().split("_")[-1]).setEnabled(True)
-                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + calc_box.objectName().split("_")[-1]).setEnabled(True)
-                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + calc_box.objectName().split("_")[-1]).setEnabled(True)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
                     elif child.objectName().startswith("check_auto_") \
                             and not child.isChecked():
-                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + calc_box.objectName().split("_")[-1]).setEnabled(False)
-                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + calc_box.objectName().split("_")[-1]).setEnabled(False)
-                        calc_box.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + calc_box.objectName().split("_")[-1]).setEnabled(False)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
 
-def sent_to_print_timetable(sub):
+
+def create_outlay(outlay_data):
     thread_list = []
-    task = threading.Thread(target=TimetablePrint(), args=(sub,))
+    task = threading.Thread(target=OutlayCreate(), args=(outlay_data,))
     thread_list.append(task)
     task.deamon = True
     task.start()
 
 
-class TimetablePrint:
+class OutlayCreate:
+    def __call__(self, outlay_data):
+        path, filename = create_outlay_doc(outlay_data)
+
+
+def create_outlay_doc(outlay_data):
+    path = os.getcwd() + r"/Документы/Прочие/"
+
+    _db = ARMDataBase('arm_db.db')
+
+    _db.close()
+
+    doc = docx.Document()
+
+    doc.sections[-1].orientation = docx.enum.section.WD_ORIENTATION.PORTRAIT
+    doc.sections[-1].page_height = docx.shared.Cm(21)
+    doc.sections[-1].page_width = docx.shared.Cm(29.7)
+    doc.sections[-1].top_margin = docx.shared.Cm(1.3)
+    doc.sections[-1].right_margin = docx.shared.Cm(1)
+    doc.sections[-1].left_margin = docx.shared.Cm(1)
+    doc.sections[-1].bottom_margin = docx.shared.Cm(1)
+
+    doc.add_paragraph(group_name + " " + timetable[0][1])
+    doc.paragraphs[0].runs[0].bold = True
+    doc.paragraphs[0].runs[0].font.name = "Times New Roman"
+    doc.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+
+    properties = doc.core_properties
+    properties.author = "ЦПЮИ ХТИ"
+
+    doc.save(path + filename)
+    return path, filename
+
+
+def create_timetable(sub):
+    thread_list = []
+    task = threading.Thread(target=TimetableCreate(), args=(sub,))
+    thread_list.append(task)
+    task.deamon = True
+    task.start()
+
+
+class TimetableCreate:
     def __call__(self, sub):
-        path, filename = create_and_print_timetable_doc(sub)
-        print_doc(path, filename)
+        path, filename = create_timetable_doc(sub)
 
 
-def create_and_print_timetable_doc(_sub):
-    disk_dir = os.getenv("SystemDrive")
-    user = os.environ.get("USERNAME")
-    path = r"{}\Users\{}\Desktop/".format(
-        disk_dir,
-        user
-    )
+def create_timetable_doc(_sub):
+    path = os.getcwd() + r"/Документы/Прочие/"
 
     _db = ARMDataBase('arm_db.db')
 
@@ -2316,7 +2632,7 @@ def clear_group_box(group_box):
 # Clearing widget
 def clear_widget(widget):
     for i in widget:
-        if i.objectName().startswith('calc_box_'):
+        if i.objectName().startswith('widget_'):
             i.setAttribute(55, 1)
             i.close()
 

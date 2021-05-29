@@ -373,7 +373,7 @@ class Ui_MainWindow(object):
         self.pushButton_enrollment_roster.setText(_translate("MainWindow", "Зачисления"))
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(self.tab_roster), _translate("MainWindow", "Реестр"))
         self.pushButton_edit_timetable.setText(_translate("MainWindow", "Изменить расписание"))
-        self.pushButton_print_timetable.setText(_translate("MainWindow", "Печать"))
+        self.pushButton_print_timetable.setText(_translate("MainWindow", "Сохранить как документ"))
         self.pushButton_update_timetable.setText(_translate("MainWindow", "Обновить список"))
         self.label_search_timetable.setText(_translate("MainWindow", "Поиск:"))
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(self.tab_timetable), _translate("MainWindow", "Расписание"))

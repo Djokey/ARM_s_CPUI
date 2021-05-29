@@ -174,7 +174,7 @@ class Ui_Students(object):
         self.pushButton_stud_save.setText(_translate("Students", "Сохранить в выбранную запись"))
         self.label_stud_fullname.setText(_translate("Students", "ФИО обучающегося"))
         self.label_stud_group.setText(_translate("Students", "Группа"))
-        self.label_stud_birthday.setText(_translate("Students", "День рождения"))
+        self.label_stud_birthday.setText(_translate("Students", "День рождения (день, месяц, год)"))
         self.label_stud_phone.setText(_translate("Students", "Телефон (не обязательно)"))
         self.groupBox_stud_gender.setTitle(_translate("Students", "Пол"))
         self.radioButton_stud_gender_male.setText(_translate("Students", "Мужской"))
