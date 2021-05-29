@@ -2353,6 +2353,7 @@ class OutlayCreate:
 
 def create_outlay_doc(outlay_data):
     path = os.getcwd() + r"/Документы/Прочие/"
+    filename = "da.docx"
 
     _db = ARMDataBase('arm_db.db')
 
@@ -2360,18 +2361,28 @@ def create_outlay_doc(outlay_data):
 
     doc = docx.Document()
 
-    doc.sections[-1].orientation = docx.enum.section.WD_ORIENTATION.PORTRAIT
-    doc.sections[-1].page_height = docx.shared.Cm(21)
-    doc.sections[-1].page_width = docx.shared.Cm(29.7)
-    doc.sections[-1].top_margin = docx.shared.Cm(1.3)
-    doc.sections[-1].right_margin = docx.shared.Cm(1)
-    doc.sections[-1].left_margin = docx.shared.Cm(1)
-    doc.sections[-1].bottom_margin = docx.shared.Cm(1)
-
-    doc.add_paragraph(group_name + " " + timetable[0][1])
+    doc.add_paragraph(" TAKS ")
     doc.paragraphs[0].runs[0].bold = True
     doc.paragraphs[0].runs[0].font.name = "Times New Roman"
     doc.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+
+    doc.add_section(docx.enum.section.WD_SECTION.NEW_PAGE)
+
+    doc.sections[1].orientation = docx.enum.section.WD_ORIENTATION.PORTRAIT
+    doc.sections[1].page_height = docx.shared.Cm(21)
+    doc.sections[1].page_width = docx.shared.Cm(29.7)
+    doc.sections[1].top_margin = docx.shared.Cm(1.3)
+    doc.sections[1].right_margin = docx.shared.Cm(1)
+    doc.sections[1].left_margin = docx.shared.Cm(1)
+    doc.sections[1].bottom_margin = docx.shared.Cm(1)
+
+    doc.add_paragraph(" TAKS ")
+    doc.paragraphs[0].runs[0].bold = True
+    doc.paragraphs[0].runs[0].font.name = "Times New Roman"
+    doc.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+
+    for par in doc.paragraphs:
+        print(par.runs)
 
     properties = doc.core_properties
     properties.author = "ЦПЮИ ХТИ"
@@ -2404,7 +2415,7 @@ def create_timetable_doc(_sub):
     _sql = "SELECT group_name FROM groups WHERE id_prog=" + str(timetable[0][2])
     group_name = _db.query(_sql)[0][0]
 
-    _sql = "SELECT id_student FROM subs_in_studs WHERE id_sub=" + _sub
+    _sql = "SELECT id_student FROM subs_in_studs WHERE id_sub=" + _sub + " AND status='1'"
     students_q = _db.query(_sql)
     students = []
 
@@ -2506,7 +2517,7 @@ def create_timetable_doc(_sub):
         tabs_c = int(tabs_c[0])
 
     table_timetable_list = []
-
+    j = 0
     for i in range(tabs_c):
         if tabs_c == 1:
             table_timetable = doc.add_table(rows=1 + len(students), cols=2 + len(parse_timetable), style='Table Grid')
@@ -2514,18 +2525,36 @@ def create_timetable_doc(_sub):
         elif i + 1 != tabs_c:
             table_timetable = doc.add_table(rows=1 + len(students), cols=2 + len_date, style='Table Grid')
             table_timetable_list.append(table_timetable)
-            par = doc.add_paragraph('_')
             if len(students) > 13:
+                par = doc.add_paragraph('_')
                 par.runs[0].add_break(docx.enum.text.WD_BREAK.PAGE)
-            else:
+                par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
+                par1.runs[0].bold = True
+                par1.runs[0].font.name = "Times New Roman"
+                par1.runs[0].font.size = docx.shared.Pt(14)
+            elif len(students) < 13 and j%2 == 1:
+                par = doc.add_paragraph('_')
+                par.runs[0].add_break(docx.enum.text.WD_BREAK.PAGE)
+                par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
+                par1.runs[0].bold = True
+                par1.runs[0].font.name = "Times New Roman"
+                par1.runs[0].font.size = docx.shared.Pt(14)
+            elif len(students) == 13 and j%2 == 0:
+                par = doc.add_paragraph('_')
                 par.runs[0].font.size = docx.shared.Pt(1)
                 par.paragraph_format.space_after = docx.shared.Pt(0)
                 par.paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+            elif len(students) == 13 and j%2 == 1:
+                par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
+                par1.runs[0].bold = True
+                par1.runs[0].font.name = "Times New Roman"
+                par1.runs[0].font.size = docx.shared.Pt(14)
         else:
             table_timetable = doc.add_table(rows=1 + len(students),
                                             cols=2 + len(parse_timetable) - (len_date * (tabs_c - 1)),
                                             style='Table Grid')
             table_timetable_list.append(table_timetable)
+        j += 1
 
     for i in range(len(table_timetable_list)):
         for row in range(len(table_timetable_list[i].rows)):
