@@ -25,7 +25,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.table import _Cell
-
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
 
 # Class for main window application
 class MainWindow(QtWidgets.QMainWindow):
@@ -87,7 +88,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outpr_ui = Ui_OutlayPrinter()
         self.outpr_ui.setupUi(self.outlay_printer)
         self.outlay_printer.setWindowTitle('Редактор сметы')
-        self.outlay_data = []
 
         self.disk_dir = os.getenv("SystemDrive")
         self.user = os.environ.get("USERNAME")
@@ -945,7 +945,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_ui.radio_col_2.clicked.connect(lambda: outlay_control_db())
         self.outlay_ui.radio_col_3.clicked.connect(lambda: outlay_control_db())
         self.outlay_ui.radio_col_4.clicked.connect(lambda: outlay_control_db())
-        self.outpr_ui.pushButton_save_doc.clicked.connect(lambda: create_outlay_doc(self.outlay_data))
+        self.outpr_ui.pushButton_save_doc.clicked.connect(lambda: self.create_outlay())
 
     # END BUTTONS
 
@@ -2338,12 +2338,53 @@ class MainWindow(QtWidgets.QMainWindow):
                         widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
 
 
-def create_outlay(outlay_data):
-    thread_list = []
-    task = threading.Thread(target=OutlayCreate(), args=(outlay_data,))
-    thread_list.append(task)
-    task.deamon = True
-    task.start()
+    def create_outlay(self):
+        if self.outlay_ui.radio_col_1.isChecked():
+            rb = 1
+        elif self.outlay_ui.radio_col_2.isChecked():
+            rb = 2
+        elif self.outlay_ui.radio_col_3.isChecked():
+            rb = 3
+        elif self.outlay_ui.radio_col_4.isChecked():
+            rb = 4
+        outlay_data = [{}, {}, {}, {}, {
+            "count": rb,
+            "head": self.outpr_ui.comboBox_head.currentText(),
+            "date_confirm": self.outpr_ui.dateEdit_date_confirm.date().toString('dd.MM.yyyy'),
+            "program": self.outpr_ui.comboBox_prog.currentText(),
+            "class": self.outpr_ui.lEdit_class.text(),
+            "date_start": self.outpr_ui.dateEdit_date_start.date().toString('dd.MM.yyyy'),
+            "date_end": self.outpr_ui.dateEdit_date_end.date().toString('dd.MM.yyyy'),
+            "manager_cpui": self.outpr_ui.comboBox_manager_cpui.currentText(),
+            "bookkeeper": self.outpr_ui.comboBox_bookkeeper.currentText(),
+            "pfc": self.outpr_ui.comboBox_pfs.currentText()}]
+        j = 0
+        for i in self.outlay_ui.widget_calcs.children():
+            if i.objectName().startswith("widget_calcbox_"):
+                for spin in i.children():
+                    if spin.objectName().startswith("spin_studs_"):
+                        outlay_data[j]["studs"] = spin.value()
+                    elif spin.objectName().startswith("spin_price_"):
+                        outlay_data[j]["price"] = spin.value()
+                    elif spin.objectName().startswith("spin_tax_"):
+                        outlay_data[j]["tax"] = spin.value()
+                    elif spin.objectName().startswith("spin_hours_"):
+                        outlay_data[j]["hours"] = spin.value()
+                j += 1
+        j = 0
+        for i in self.outpr_ui.widget_subs_teachs.children():
+            if i.objectName().startswith("widget_sub_teach_"):
+                for line in i.children():
+                    if line.objectName().startswith("lEdit_sub_name_"):
+                        outlay_data[j]["subject"] = line.text()
+                    elif line.objectName().startswith("lEdit_teach_name_"):
+                        outlay_data[j]["teacher"] = line.text()
+                j += 1
+        thread_list = []
+        task = threading.Thread(target=OutlayCreate(), args=(outlay_data,))
+        thread_list.append(task)
+        task.deamon = True
+        task.start()
 
 
 class OutlayCreate:
@@ -2353,36 +2394,352 @@ class OutlayCreate:
 
 def create_outlay_doc(outlay_data):
     path = os.getcwd() + r"/Документы/Прочие/"
-    filename = "da.docx"
 
-    _db = ARMDataBase('arm_db.db')
-
-    _db.close()
+    copy_index = 0
+    filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
+               f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]}.docx"
+    desk_list_dir = os.listdir(path)
+    while filename in desk_list_dir:
+        copy_index += 1
+        filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
+                   f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} ({str(copy_index)}).docx"
 
     doc = docx.Document()
 
-    doc.add_paragraph(" TAKS ")
-    doc.paragraphs[0].runs[0].bold = True
-    doc.paragraphs[0].runs[0].font.name = "Times New Roman"
-    doc.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+    # START DOC / FIRST PAGE
+    date_confirm = ""
+    if outlay_data[4]['date_confirm'][3:5] == "01":
+        date_confirm = 'января'
+    elif outlay_data[4]['date_confirm'][3:5] == "02":
+        date_confirm = 'февраля'
+    elif outlay_data[4]['date_confirm'][3:5] == "03":
+        date_confirm = 'марта'
+    elif outlay_data[4]['date_confirm'][3:5] == "04":
+        date_confirm = 'апреля'
+    elif outlay_data[4]['date_confirm'][3:5] == "05":
+        date_confirm = 'мая'
+    elif outlay_data[4]['date_confirm'][3:5] == "06":
+        date_confirm = 'июня'
+    elif outlay_data[4]['date_confirm'][3:5] == "07":
+        date_confirm = 'июля'
+    elif outlay_data[4]['date_confirm'][3:5] == "08":
+        date_confirm = 'августа'
+    elif outlay_data[4]['date_confirm'][3:5] == "09":
+        date_confirm = 'сентября'
+    elif outlay_data[4]['date_confirm'][3:5] == "10":
+        date_confirm = 'октября'
+    elif outlay_data[4]['date_confirm'][3:5] == "11":
+        date_confirm = 'ноября'
+    elif outlay_data[4]['date_confirm'][3:5] == "12":
+        date_confirm = 'декабря'
 
+
+    doc.sections[0].page_height = docx.shared.Cm(29.7)
+    doc.sections[0].page_width = docx.shared.Cm(21)
+    doc.sections[0].top_margin = docx.shared.Cm(2)
+    doc.sections[0].right_margin = docx.shared.Cm(1.5)
+    doc.sections[0].left_margin = docx.shared.Cm(3)
+    doc.sections[0].bottom_margin = docx.shared.Cm(1.25)
+
+    # HEADER
+    tab_head = doc.add_table(rows=4, cols=2)
+    tab_head.alignment = WD_TABLE_ALIGNMENT.RIGHT
+    cell = tab_head.cell(0, 0)
+    cell.merge(tab_head.cell(0, 1))
+    cell.text = "УТВЕРЖДАЮ:"
+    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    cell.add_paragraph(" ")
+    cell.paragraphs[1].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[1].runs[0].font.size = docx.shared.Pt(14)
+    cell.paragraphs[1].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[1].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    tab_head.rows[0].height = docx.shared.Cm(1.1)
+    set_cell_margins(cell, start=0)
+    cell.width = docx.shared.Cm(7.1)
+
+    cell = tab_head.cell(1, 0)
+    cell.merge(tab_head.cell(1, 1))
+    cell.text = "Директор ХТИ – филиала СФУ"
+    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    cell.add_paragraph(" ")
+    cell.paragraphs[1].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[1].runs[0].font.size = docx.shared.Pt(14)
+    cell.paragraphs[1].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[1].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    tab_head.rows[1].height = docx.shared.Cm(1.1)
+    set_cell_margins(cell, start=0)
+    cell.width = docx.shared.Cm(7.1)
+
+    cell = tab_head.cell(2, 0)
+    cell.text = " "
+    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    set_cell_margins(cell, start=0)
+    cell.width = docx.shared.Cm(2.1)
+    set_cell_border(
+        cell,
+        bottom={"sz": 12, "val": "single", "color": "#000000"}
+    )
+
+    cell = tab_head.cell(2, 1)
+
+    cell.text = f"{outlay_data[4]['head'].split(' ')[-2][:1]}. " \
+                f"{outlay_data[4]['head'].split(' ')[-1][:1]}. " \
+                f"{outlay_data[4]['head'].split(' ')[-3]}"
+
+    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    tab_head.rows[2].height = docx.shared.Cm(0.55)
+    set_cell_margins(cell, start=0)
+    cell.width = docx.shared.Cm(5)
+
+    cell = tab_head.cell(3, 0)
+    cell.merge(tab_head.cell(3, 1))
+    cell.text = " "
+    cell.paragraphs[0].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
+    cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+
+    cell.add_paragraph(f"«")
+    cell.paragraphs[1].runs[0].font.name = "Times New Roman"
+    cell.paragraphs[1].runs[0].font.size = docx.shared.Pt(14)
+
+    cell.paragraphs[1].add_run(f"{outlay_data[4]['date_confirm'][:2]}")
+    cell.paragraphs[1].runs[1].font.name = "Times New Roman"
+    cell.paragraphs[1].runs[1].font.size = docx.shared.Pt(14)
+    cell.paragraphs[1].runs[1].font.underline = True
+
+    cell.paragraphs[1].add_run(f"» ")
+    cell.paragraphs[1].runs[2].font.name = "Times New Roman"
+    cell.paragraphs[1].runs[2].font.size = docx.shared.Pt(14)
+
+    cell.paragraphs[1].add_run(f"{date_confirm} ")
+    cell.paragraphs[1].runs[3].font.name = "Times New Roman"
+    cell.paragraphs[1].runs[3].font.size = docx.shared.Pt(14)
+    cell.paragraphs[1].runs[3].font.underline = True
+
+    cell.paragraphs[1].add_run(f"{outlay_data[4]['date_confirm'][6:]}г.")
+    cell.paragraphs[1].runs[4].font.name = "Times New Roman"
+    cell.paragraphs[1].runs[4].font.size = docx.shared.Pt(14)
+
+
+    cell.paragraphs[1].paragraph_format.space_after = docx.shared.Pt(0)
+    cell.paragraphs[1].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+    tab_head.rows[1].height = docx.shared.Cm(1.1)
+    set_cell_margins(cell, start=0)
+    cell.width = docx.shared.Cm(7.1)
+
+    par = doc.add_paragraph(" ")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.paragraph_format.space_after = docx.shared.Pt(0)
+    par.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+
+    par = doc.add_paragraph(" ")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.paragraph_format.space_after = docx.shared.Pt(0)
+    par.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+
+    par = doc.add_paragraph(f"СМЕТА")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    par = doc.add_paragraph("доходов и расходов на проведение курсов")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.paragraph_format.space_after = docx.shared.Pt(0)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    par = doc.add_paragraph(
+    f"«{outlay_data[4]['program']}» ({outlay_data[4]['class']} класс)")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.paragraph_format.space_after = docx.shared.Pt(0)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    par = doc.add_paragraph(
+    f"(с {outlay_data[4]['date_start']} г. по {outlay_data[4]['date_end']} г.)")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.paragraph_format.space_after = docx.shared.Pt(0)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    par = doc.add_paragraph(" ")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.paragraph_format.space_after = docx.shared.Pt(0)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # TABLE OUTLAY
+    def create_cell(text, __cell, __rows, _width, _height, font_size=14, font_name="Times New Roman",
+                    text_alignment=WD_ALIGN_PARAGRAPH.CENTER, cell_alignment=WD_ALIGN_VERTICAL.CENTER,
+                    line_spacing=WD_LINE_SPACING.SINGLE, __space_after=0):
+        __cell.text = text
+        __cell.paragraphs[0].runs[0].font.name = font_name
+        __cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(font_size)
+        __cell.paragraphs[0].paragraph_format.line_spacing_rule = line_spacing
+        __cell.paragraphs[0].alignment = text_alignment
+        __cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(__space_after)
+        __cell.vertical_alignment = cell_alignment
+        __cell.width = docx.shared.Cm(_width)
+        __rows.height = docx.shared.Cm(_height)
+
+    tab_outlay = doc.add_table(rows=7, cols=4, style='Table Grid')
+
+    create_cell("Код", tab_outlay.cell(0, 0), tab_outlay.rows[0], 1.69, 0.53)
+    create_cell("Наименование предметных статей", tab_outlay.cell(0, 1), tab_outlay.rows[0], 8.08, 0.53)
+    create_cell("Отношение к затратам, %", tab_outlay.cell(0, 2), tab_outlay.rows[0], 4.26, 0.53)
+    create_cell("Сумма, руб.", tab_outlay.cell(0, 3), tab_outlay.rows[0], 2.6, 0.53)
+
+    profit = 0.0
+    cost = 0.0
+    for i in range(outlay_data[4]["count"]):
+        profit += outlay_data[i]["studs"] * outlay_data[i]["price"]
+        cost += (outlay_data[i]["hours"] * outlay_data[i]["tax"]) * 1.302
+    if len(str(round(profit, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(" ", tab_outlay.cell(1, 0), tab_outlay.rows[1], 1.69, 0.53)
+    create_cell("общий доход",
+                tab_outlay.cell(1, 1), tab_outlay.rows[1], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(" ", tab_outlay.cell(1, 2), tab_outlay.rows[1], 4.26, 0.53)
+    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(1, 3), tab_outlay.rows[1], 2.6, 0.53, font_size=12)
+
+    create_cell(" ", tab_outlay.cell(2, 0), tab_outlay.rows[2], 1.69, 0.53)
+    create_cell("расходы, всего в том числе:",
+                tab_outlay.cell(2, 1), tab_outlay.rows[2], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell("100,00", tab_outlay.cell(2, 2), tab_outlay.rows[2], 4.26, 0.53, font_size=12)
+    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(2, 3), tab_outlay.rows[2], 2.6, 0.53, font_size=12)
+
+    try:
+        otfot = cost / profit * 100
+    except ZeroDivisionError:
+        otfot = 0.0
+    if len(str(round(otfot, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(" ", tab_outlay.cell(3, 0), tab_outlay.rows[3], 1.69, 0.53)
+    create_cell("вознаграждение за образовательные услуги гражданско-правового характера и "
+                "начисление страховых взносов во внебюджетные фонды",
+                tab_outlay.cell(3, 1), tab_outlay.rows[3], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(str(round(otfot, 2)).replace(".", ",") + zero,
+                tab_outlay.cell(3, 2), tab_outlay.rows[3], 4.26, 0.53, font_size=12)
+    if len(str(round(cost, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(str(round(cost, 2)).replace(".", ",") + zero,
+                tab_outlay.cell(3, 3), tab_outlay.rows[3], 2.6, 0.53, font_size=12)
+
+    public_service = 0.05 * profit
+    if len(str(round(public_service, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(" ", tab_outlay.cell(4, 0), tab_outlay.rows[4], 1.69, 0.53)
+    create_cell("коммунальные услуги",
+                tab_outlay.cell(4, 1), tab_outlay.rows[4], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell("5,00", tab_outlay.cell(4, 2), tab_outlay.rows[4], 4.26, 0.53, font_size=12)
+    create_cell(str(round(public_service, 2)).replace(".", ",") + zero,
+                tab_outlay.cell(4, 3), tab_outlay.rows[4], 2.6, 0.53, font_size=12)
+
+    inst_cost = 0.18 * profit
+    if len(str(round(inst_cost, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(" ", tab_outlay.cell(5, 0), tab_outlay.rows[5], 1.69, 0.53)
+    create_cell("общеинститутские расходы",
+                tab_outlay.cell(5, 1), tab_outlay.rows[5], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell("18,00", tab_outlay.cell(5, 2), tab_outlay.rows[5], 4.26, 0.53, font_size=12)
+    create_cell(str(round(inst_cost, 2)).replace(".", ",") + zero,
+                tab_outlay.cell(5, 3), tab_outlay.rows[5], 2.6, 0.53, font_size=12)
+
+    div_cost_ratio = 100.0 - otfot - 5.0 - 18.0
+    div_cost = div_cost_ratio * profit / 100
+    if len(str(round(div_cost_ratio, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(" ", tab_outlay.cell(6, 0), tab_outlay.rows[6], 1.69, 0.53)
+    create_cell("расходы подразделения",
+                tab_outlay.cell(6, 1), tab_outlay.rows[6], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(str(round(div_cost_ratio, 2)).replace(".", ",") + zero,
+                tab_outlay.cell(6, 2), tab_outlay.rows[6], 4.26, 0.53, font_size=12)
+    if len(str(round(div_cost, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(str(round(div_cost, 2)).replace(".", ",") + zero,
+                tab_outlay.cell(6, 3), tab_outlay.rows[6], 2.6, 0.53, font_size=12)
+
+    par = doc.add_paragraph(" ")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+
+    tab_approve = doc.add_table(rows=6, cols=2)
+
+    create_cell("Зав. ЦПЮИ", tab_approve.cell(0, 0), tab_approve.rows[1], 11.94, 1.12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. " \
+                f"{outlay_data[4]['manager_cpui'].split(' ')[-1][:1]}. " \
+                f"{outlay_data[4]['manager_cpui'].split(' ')[-3]}",
+                tab_approve.cell(0, 1), tab_approve.rows[0], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+
+    create_cell(" ", tab_approve.cell(1, 0), tab_approve.rows[1], 11.94, 1.12)
+    create_cell(" ", tab_approve.cell(1, 1), tab_approve.rows[1], 4.94, 1.12)
+
+    create_cell("Согласовано:", tab_approve.cell(2, 0), tab_approve.rows[2], 11.94, 1.12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(" ", tab_approve.cell(2, 1), tab_approve.rows[2], 4.94, 1.12)
+
+    create_cell("Гл. бухгалтер", tab_approve.cell(3, 0), tab_approve.rows[3], 11.94, 1.12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(f"{outlay_data[4]['bookkeeper'].split(' ')[-2][:1]}. " \
+                f"{outlay_data[4]['bookkeeper'].split(' ')[-1][:1]}. " \
+                f"{outlay_data[4]['bookkeeper'].split(' ')[-3]}",
+                tab_approve.cell(3, 1), tab_approve.rows[3], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+
+    create_cell(" ", tab_approve.cell(4, 0), tab_approve.rows[4], 11.94, 1.12)
+    create_cell(" ", tab_approve.cell(4, 1), tab_approve.rows[4], 4.94, 1.12)
+
+    create_cell("Зав. ПФС", tab_approve.cell(5, 0), tab_approve.rows[5], 11.94, 1.12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. " \
+                f"{outlay_data[4]['pfc'].split(' ')[-1][:1]}. " \
+                f"{outlay_data[4]['pfc'].split(' ')[-3]}",
+                tab_approve.cell(5, 1), tab_approve.rows[5], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+
+    # SECOND PAGE
     doc.add_section(docx.enum.section.WD_SECTION.NEW_PAGE)
 
     doc.sections[1].orientation = docx.enum.section.WD_ORIENTATION.PORTRAIT
     doc.sections[1].page_height = docx.shared.Cm(21)
     doc.sections[1].page_width = docx.shared.Cm(29.7)
-    doc.sections[1].top_margin = docx.shared.Cm(1.3)
-    doc.sections[1].right_margin = docx.shared.Cm(1)
-    doc.sections[1].left_margin = docx.shared.Cm(1)
-    doc.sections[1].bottom_margin = docx.shared.Cm(1)
+    doc.sections[1].top_margin = docx.shared.Cm(3)
+    doc.sections[1].right_margin = docx.shared.Cm(2)
+    doc.sections[1].left_margin = docx.shared.Cm(1.25)
+    doc.sections[1].bottom_margin = docx.shared.Cm(1.5)
 
-    doc.add_paragraph(" TAKS ")
-    doc.paragraphs[0].runs[0].bold = True
-    doc.paragraphs[0].runs[0].font.name = "Times New Roman"
-    doc.paragraphs[0].runs[0].font.size = docx.shared.Pt(14)
-
-    for par in doc.paragraphs:
-        print(par.runs)
+    par = doc.add_paragraph(" TAKS ")
+    par.runs[0].bold = True
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
 
     properties = doc.core_properties
     properties.author = "ЦПЮИ ХТИ"
@@ -2413,7 +2770,12 @@ def create_timetable_doc(_sub):
     timetable = _db.query(_sql)
 
     _sql = "SELECT group_name FROM groups WHERE id_prog=" + str(timetable[0][2])
-    group_name = _db.query(_sql)[0][0]
+    try:
+        group_name = _db.query(_sql)[0][0]
+    except IndexError:
+        group_name = "Нет группы с этой программой"
+    except Exception:
+        group_name = "Ошибка загрузки группы"
 
     _sql = "SELECT id_student FROM subs_in_studs WHERE id_sub=" + _sub + " AND status='1'"
     students_q = _db.query(_sql)
@@ -2543,7 +2905,7 @@ def create_timetable_doc(_sub):
                 par = doc.add_paragraph('_')
                 par.runs[0].font.size = docx.shared.Pt(1)
                 par.paragraph_format.space_after = docx.shared.Pt(0)
-                par.paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                par.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
             elif len(students) == 13 and j%2 == 1:
                 par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
                 par1.runs[0].bold = True
@@ -2565,38 +2927,38 @@ def create_timetable_doc(_sub):
                     cell.paragraphs[0].runs[0].bold = True
                     cell.paragraphs[0].runs[0].font.name = "Times New Roman"
                     cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
-                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
-                    cell.paragraphs[0].alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
                     cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
                     cell.width = docx.shared.Cm(0.89)
-                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                 elif row == 0 and col == 1:
                     cell.text = "ФИО"
                     cell.paragraphs[0].runs[0].bold = True
                     cell.paragraphs[0].runs[0].font.name = "Times New Roman"
                     cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
-                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
-                    cell.paragraphs[0].alignment = docx.enum.text.WD_ALIGN_PARAGRAPH.CENTER
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
                     cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
                     cell.width = docx.shared.Cm(5.5)
-                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                 elif row > 0 and col == 0:
                     cell.text = str(row) + "."
                     cell.paragraphs[0].runs[0].font.name = "Times New Roman"
                     cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
-                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
                     cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
                     cell.width = docx.shared.Cm(0.89)
                     table_timetable_list[i].rows[row].height = docx.shared.Cm(0.4)
-                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                 elif row > 0 and col == 1:
                     cell.text = students[row - 1][1]
                     cell.paragraphs[0].runs[0].font.name = "Times New Roman"
                     cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
-                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
                     cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
                     cell.width = docx.shared.Cm(5.8)
-                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.TOP
+                    cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
                 elif row == 0 and col > 1:
                     cell.text = parse_timetable[0][0].strftime("%d")[1:] \
                         if parse_timetable[0][0].strftime("%d").startswith("0") \
@@ -2606,23 +2968,23 @@ def create_timetable_doc(_sub):
                     cell.paragraphs[0].runs[0].bold = True
                     cell.paragraphs[0].runs[0].font.name = "Times New Roman"
                     cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
-                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
                     cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
                     cell.paragraphs[0].paragraph_format.left_indent = docx.shared.Cm(0.2)
                     cell.paragraphs[0].paragraph_format.right_indent = docx.shared.Cm(0.2)
                     cell.width = docx.shared.Cm(0.81)
                     table_timetable_list[i].rows[row].height = docx.shared.Cm(2.5)
-                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                     set_vertical_cell_direction(cell, "btLr")
                 else:
                     cell.text = ""
                     cell.paragraphs[0].runs[0].font.name = "Times New Roman"
                     cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(10)
-                    cell.paragraphs[0].paragraph_format.line_spacing_rule = docx.enum.text.WD_LINE_SPACING.SINGLE
+                    cell.paragraphs[0].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
                     cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(0)
                     cell.width = docx.shared.Cm(0.81)
                     table_timetable_list[i].rows[row].height = docx.shared.Cm(0.4)
-                    cell.vertical_alignment = docx.enum.table.WD_ALIGN_VERTICAL.CENTER
+                    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
     properties = doc.core_properties
     properties.author = "ЦПЮИ ХТИ"
@@ -2640,6 +3002,76 @@ def set_vertical_cell_direction(cell: _Cell, direction: str):
     textDirection = OxmlElement('w:textDirection')
     textDirection.set(qn('w:val'), direction)  # btLr tbRl
     tcPr.append(textDirection)
+
+
+def set_cell_border(cell: _Cell, **kwargs):
+    """
+    Set cell`s border
+    Usage:
+
+    set_cell_border(
+        cell,
+        top={"sz": 12, "val": "single", "color": "#FF0000", "space": "0"},
+        bottom={"sz": 12, "color": "#00FF00", "val": "single"},
+        start={"sz": 24, "val": "dashed", "shadow": "true"},
+        end={"sz": 12, "val": "dashed"},
+    )
+    """
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+
+    # check for tag existnace, if none found, then create one
+    tcBorders = tcPr.first_child_found_in("w:tcBorders")
+    if tcBorders is None:
+        tcBorders = OxmlElement('w:tcBorders')
+        tcPr.append(tcBorders)
+
+    # list over all available tags
+    for edge in ('start', 'top', 'end', 'bottom', 'insideH', 'insideV'):
+        edge_data = kwargs.get(edge)
+        if edge_data:
+            tag = 'w:{}'.format(edge)
+
+            # check for tag existnace, if none found, then create one
+            element = tcBorders.find(qn(tag))
+            if element is None:
+                element = OxmlElement(tag)
+                tcBorders.append(element)
+
+            # looks like order of attributes is important
+            for key in ["sz", "val", "color", "space", "shadow"]:
+                if key in edge_data:
+                    element.set(qn('w:{}'.format(key)), str(edge_data[key]))
+
+
+def set_cell_margins(cell: _Cell, **kwargs):
+    """
+    cell:  actual cell instance you want to modify
+
+    usage:
+
+        set_cell_margins(cell, top=50, start=50, bottom=50, end=50)
+
+    provided values are in twentieths of a point (1/1440 of an inch).
+    read more here: http://officeopenxml.com/WPtableCellMargins.php
+    """
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    tcMar = OxmlElement('w:tcMar')
+
+    for m in [
+        "top",
+        "start",
+        "bottom",
+        "end",
+    ]:
+        if m in kwargs:
+            node = OxmlElement("w:{}".format(m))
+            node.set(qn('w:w'), str(kwargs.get(m)))
+            node.set(qn('w:type'), 'dxa')
+            tcMar.append(node)
+
+    tcPr.append(tcMar)
 
 
 # Clearing edit list
