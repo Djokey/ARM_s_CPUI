@@ -213,7 +213,8 @@ class MainWindow(QtWidgets.QMainWindow):
             for i in timetable_list:
                 if i.objectName().startswith("clb_"):
                     if i.isChecked():
-                        create_timetable(i.objectName().split("_")[-1])
+                        i_name = i.objectName().split("_")[-1]
+                        create_timetable(i_name)
                         _set_doc_warning = 0
                         break
                     else:
@@ -223,8 +224,28 @@ class MainWindow(QtWidgets.QMainWindow):
                                 'Сначала выберите расписание для сохранения.\n\nНажмите на нужное расписание, '
                                 'чтобы выбрать его, а потом нажмите на кнопку "Сохранить как документ"')
             else:
+                path = os.getcwd() + r"/Документы/Прочие/"
+                _db = ARMDataBase('arm_db.db')
+                _sql = "SELECT sub_name, id_prog FROM subjects WHERE id_sub=" + i_name
+                timetable = _db.query(_sql)
+                _sql = "SELECT group_name FROM groups WHERE id_prog=" + str(timetable[0][1])
+                try:
+                    group_name = _db.query(_sql)[0][0]
+                except IndexError:
+                    group_name = "Нет группы с этой программой"
+                except Exception:
+                    group_name = "Ошибка загрузки группы"
+
+                copy_index = 0
+                filename = "Расписание " + group_name + " " + timetable[0][0] + ".docx"
+                desk_list_dir = os.listdir(path)
+                while filename in desk_list_dir:
+                    copy_index += 1
+                    filename = "Расписание " + group_name + " " + timetable[0][0] + " (" + str(copy_index) + ").docx"
+                _db.close()
                 set_doc_warning("Отправлено",
-                                'Документ будет сохранен в прочие документы.')
+                                'Документ будет сохранен в прочие документы.\n'
+                                'Имя документа:\n' + filename)
 
         # But for notes
         def headers_control_db(type_post):
@@ -1336,15 +1357,11 @@ class MainWindow(QtWidgets.QMainWindow):
         _db = ARMDataBase()
         _sql = "SELECT * FROM groups"
         groups = _db.query(_sql)
-        _db.close()
-        grp_loader = []
 
-        _db = ARMDataBase()
         for i in range(len(groups)):
             grps = []
             for h in groups[i]:
                 grps.append(h)
-            grp_loader.append(str(grps[0])[:])
 
             _sql = "SELECT prog_name FROM programs WHERE id_prog=" + str(grps[3])
             group_prog = _db.query(_sql)
@@ -1378,13 +1395,10 @@ class MainWindow(QtWidgets.QMainWindow):
                                                   grps[2] + grps[3] + grps[1],
                                                   self.groups_ui.sAWContent_groups_list)
                     grp_but.clicked.connect(lambda: loader_groups_edits())
-        _db.close()
 
-        _db = ARMDataBase()
         _sql = "SELECT * FROM programs"
         programs = _db.query(_sql)
         _db.close()
-        _programs = []
 
         self.groups_ui.comboBox_groups_prog.clear()
         for prog in programs:
@@ -1440,7 +1454,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             subs[0] = 'clb_sub_' + str(subs[0])
             subs[1] = 'Название: ' + subs[1] + '\n' if subs[1] is not None and subs[1] != '' else ''
-            subs[2] = 'Такса: ' + subs[2] + '\n' if subs[2] is not None and subs[2] != '' else ''
+            subs[2] = 'Почасовая оплата: ' + subs[2] + '\n' if subs[2] is not None and subs[2] != '' else ''
             subs[3] = 'Преподаватель: ' + sub_teach[0][0] + '\n' if sub_teach[0][0] is not None and sub_teach[0][
                 0] != '' else ''
             subs[4] = 'Стоимость: ' + subs[4] + '\n' if subs[4] is not None and subs[4] != '' else ''
@@ -1816,9 +1830,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ttable_list = []
         clear_list(self.ttable_ui.sAWContent_hours_list.children())
         _db = ARMDataBase()
-        _sql = "SELECT sub_ttable, sub_hours FROM subjects WHERE id_sub=" + self.ttable_selected_sub
+        _sql = "SELECT sub_ttable, sub_hours, sub_hours_need FROM subjects WHERE id_sub=" + self.ttable_selected_sub
         timetable_sub = _db.query(_sql)
         self.ttable_ui.lab_sum.setText("Сумма часов: " + timetable_sub[0][1])
+        self.ttable_ui.lab_need.setText("Необходимо часов: " + timetable_sub[0][2])
         parse_timetable = []
         if timetable_sub[0][0] is not None and timetable_sub[0][0] != '':
             for date in timetable_sub[0][0].split(","):
@@ -2096,6 +2111,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                                   self.ttable_ui.calendar.selectedDate().toPyDate(),
                                                   datetime.datetime.min.time())))
             ).setChecked(1)
+        else:
+            self.load_db_timetable_list()
 
     def add_calculate_box(self, sel_sub=False, id_sub="", i=0, j=0):
         widget_calcbox = QtWidgets.QGroupBox(self.outlay_ui.widget_calcs)
@@ -2405,6 +2422,24 @@ class MainWindow(QtWidgets.QMainWindow):
                     elif line.objectName().startswith("lEdit_teach_name_"):
                         outlay_data[j]["teacher"] = line.text()
                 j += 1
+
+        path = os.getcwd() + r"/Документы/Прочие/"
+        filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
+                   f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]}.docx"
+        desk_list_dir = os.listdir(path)
+        copy_index = 0
+        while filename in desk_list_dir:
+            copy_index += 1
+            filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
+                       f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} ({str(copy_index)}).docx"
+
+        self.outlay_printer.close()
+        set_doc_warning("Отправлено",
+                        'Документ будет сохранен в прочие документы.\n'
+                        'Вы сможете найти его во вкладке "Прочие"\n'
+                        'Имя документа:\n' +
+                        filename)
+
         thread_list = []
         task = threading.Thread(target=OutlayCreate(), args=(outlay_data,))
         thread_list.append(task)

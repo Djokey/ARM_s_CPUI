@@ -65,6 +65,12 @@ class Ui_TTableEditor(object):
         self.lab_sum.setFont(font)
         self.vL_main.addWidget(self.lab_sum)
 
+        self.lab_need = QtWidgets.QLabel(TTableEditor)
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        self.lab_need.setFont(font)
+        self.vL_main.addWidget(self.lab_need)
+
         self.hL_widget_hours_list.setStretch(1, 2)
 
         self.retranslateUi(TTableEditor)
@@ -77,3 +83,4 @@ class Ui_TTableEditor(object):
         self.btn_set_hours.setText(_translate("TTableEditor", "Установить часы"))
         self.btn_del_hours.setText(_translate("TTableEditor", "Удалить часы"))
         self.lab_sum.setText(_translate("TTableEditor", "Сумма часов: "))
+        self.lab_need.setText(_translate("TTableEditor", "Необходимо часов: "))
