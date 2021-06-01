@@ -187,6 +187,25 @@ class MainWindow(QtWidgets.QMainWindow):
                                 'Сначала выберите документ для печати.\n\nНажмите на нужный документ, '
                                 'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
 
+        # But for decree
+        def other_print():
+            other_list = self.ui.sAWContent_other.children()
+            _set_doc_warning = 1
+            for i in other_list:
+                if i.objectName() == 'vL_sAWContent_other':
+                    pass
+                else:
+                    if i.isChecked():
+                        print_doc(os.path.abspath(os.curdir) + r'/Документы/Прочие/', i.text() + '.docx')
+                        _set_doc_warning = 0
+                        break
+                    else:
+                        _set_doc_warning = 1
+            if _set_doc_warning:
+                set_doc_warning("Ошибка (не выбран документ для печати)",
+                                'Сначала выберите документ для печати.\n\nНажмите на нужный документ, '
+                                'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
+
         # But for timetable
         def timetable_print():
             timetable_list = self.ui.sAWContent_timetable.children()
@@ -872,6 +891,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_print_notes.clicked.connect(lambda: notes_print())
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_print())
         self.ui.pushButton_print_timetable.clicked.connect(lambda: timetable_print())
+        self.ui.pushButton_print_other.clicked.connect(lambda: other_print())
+        self.ui.pushButton_update_other.clicked.connect(
+            lambda: self.load_list(r'Прочие', self.ui.sAWContent_other, 'other_'))
+        self.ui.pushButton_update_decree.clicked.connect(
+            lambda: self.load_list(r'Приказы', self.ui.sAWContent_decree, 'decree_'))
+        self.ui.pushButton_update_notes.clicked.connect(
+            lambda: self.load_list(r'Записки', self.ui.sAWContent_notes, 'note_'))
 
         self.ui.pushButton_update_timetable.clicked.connect(
             lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
@@ -959,20 +985,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_enrollment.hide()
         self.ui.widget_outlay.hide()
 
+    def load_list(self, dir, parent_list, first_name):
+        clear_list(parent_list.children())
+        list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + dir)
+        for docx in list_dir:
+            pos1 = docx.find('№')
+            doc_id = docx[pos1 + 1:pos1 + 6]
+            self.create_list_el("clb_" + first_name + doc_id, docx[:-5], parent_list)
+
     def load_for_start(self):
-        notes_list = os.listdir(os.path.abspath(os.curdir) + r'/Документы/Записки/')
-        decree_list = os.listdir(os.path.abspath(os.curdir) + r'/Документы/Приказы/')
-
-        def load_docx(list_docx, p, docx_name):
-            for docx in list_docx:
-                pos1 = docx.find('№')
-                pos2 = docx.find('.')
-                doc_id = docx[pos1 + 1:pos2]
-                self.create_list_el("clb_" + docx_name + doc_id, docx[:-5], p)
-
         # Loading doc's for lists with doc's
-        load_docx(notes_list, self.ui.sAWContent_notes, 'decree_')
-        load_docx(decree_list, self.ui.sAWContent_decree, 'note_')
+        self.load_list(r'Приказы', self.ui.sAWContent_decree, 'decree_')
+        self.load_list(r'Записки', self.ui.sAWContent_notes, 'note_')
+        self.load_list(r'Прочие', self.ui.sAWContent_other, 'other_')
         self.load_db_timetable()
         # Add normal icon
         self.ui.icon = QtGui.QIcon()
