@@ -6,6 +6,7 @@ import win32api
 import win32print
 import datetime
 import docx
+import res
 
 from ui import *
 from headers_ui import *
@@ -1040,10 +1041,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_db_timetable()
         # Add normal icon
         self.ui.icon = QtGui.QIcon()
-        self.ui.icon.addPixmap(QtGui.QPixmap("sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.icon.addPixmap(QtGui.QPixmap(":/sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.setWindowIcon(self.ui.icon)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/sfu_logo.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ttable.setWindowIcon(icon)
         self.outlay_printer.setWindowIcon(icon)
 
@@ -3456,7 +3457,7 @@ def print_doc(filepath, filename):
 
 
 # Func for warning
-def set_doc_warning(war_name, war_text, war_icon="sfu_logo.ico"):
+def set_doc_warning(war_name, war_text, war_icon=":/sfu_logo.ico"):
     _set_doc_warning = QMessageBox()
     _set_doc_warning.setWindowTitle(war_name)
     _set_doc_warning.setText(war_text)
