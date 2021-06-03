@@ -1,6 +1,5 @@
 import copy
 import threading
-import time
 import sys
 import os
 import win32api
@@ -27,6 +26,7 @@ from docx.oxml.ns import qn
 from docx.table import _Cell
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
+
 
 # Class for main window application
 class MainWindow(QtWidgets.QMainWindow):
@@ -85,8 +85,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ttable_list = []
 
         self.outlay_printer = QtWidgets.QDialog(self)
-        self.outpr_ui = Ui_OutlayPrinter()
-        self.outpr_ui.setupUi(self.outlay_printer)
+        self.outlay_print_ui = Ui_OutlayPrinter()
+        self.outlay_print_ui.setupUi(self.outlay_printer)
         self.outlay_printer.setWindowTitle('Редактор сметы')
 
         self.disk_dir = os.getenv("SystemDrive")
@@ -149,6 +149,38 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # Func for setup all buttons
     def setup_buttons_funcs(self):
+        def headers_back():
+            self.ui.widget_headers.hide()
+            self.ui.widget_roster.show()
+
+        def programs_back():
+            self.ui.widget_programs.hide()
+            self.ui.widget_roster.show()
+
+        def teachers_back():
+            self.ui.widget_teachers.hide()
+            self.ui.widget_roster.show()
+
+        def groups_back():
+            self.ui.widget_groups.hide()
+            self.ui.widget_roster.show()
+
+        def subjects_back():
+            self.ui.widget_subjects.hide()
+            self.ui.widget_roster.show()
+
+        def students_back():
+            self.ui.widget_students.hide()
+            self.ui.widget_roster.show()
+
+        def enrollment_back():
+            self.ui.widget_enrollment.hide()
+            self.ui.widget_roster.show()
+
+        def outlay_back():
+            self.ui.widget_outlay.hide()
+            self.ui.widget_roster.show()
+
         # But for notes
         def notes_print():
             notes_list = self.ui.sAWContent_notes.children()
@@ -210,6 +242,7 @@ class MainWindow(QtWidgets.QMainWindow):
         def timetable_print():
             timetable_list = self.ui.sAWContent_timetable.children()
             _set_doc_warning = 1
+            i_name = ""
             for i in timetable_list:
                 if i.objectName().startswith("clb_"):
                     if i.isChecked():
@@ -233,8 +266,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     group_name = _db.query(_sql)[0][0]
                 except IndexError:
                     group_name = "Нет группы с этой программой"
-                except Exception:
-                    group_name = "Ошибка загрузки группы"
 
                 copy_index = 0
                 filename = "Расписание " + group_name + " " + timetable[0][0] + ".docx"
@@ -398,7 +429,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     _sql = "SELECT id_group FROM groups WHERE id_prog=" + programs_selected
                     groups = _db.query(_sql)
                     for group in groups:
-                        _sql = "SELECT id_student FROM students WHERE id_group=" + groups_selected
+                        _sql = "SELECT id_student FROM students WHERE id_group=" + group
                         studs = _db.query(_sql)
                         for stud in studs:
                             _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + stud[0]
@@ -788,7 +819,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     _sql = "SELECT id_sis FROM subs_in_studs WHERE id_student=" + enrollment_selected + " AND id_sub=" + \
                            enrollment[0]
                     check_sis = _db.query(_sql)
-                    if check_sis != []:
+                    if check_sis:
                         _sql = "UPDATE subs_in_studs SET " \
                                "student_numcontract = '{0}', " \
                                "student_datecontract = '{1}', " \
@@ -876,41 +907,28 @@ class MainWindow(QtWidgets.QMainWindow):
                         a = 1
                         b = 1
 
-        def headers_back():
-            self.ui.widget_headers.hide()
-            self.ui.widget_roster.show()
-
-        def programs_back():
-            self.ui.widget_programs.hide()
-            self.ui.widget_roster.show()
-
-        def teachers_back():
-            self.ui.widget_teachers.hide()
-            self.ui.widget_roster.show()
-
-        def groups_back():
-            self.ui.widget_groups.hide()
-            self.ui.widget_roster.show()
-
-        def subjects_back():
-            self.ui.widget_subjects.hide()
-            self.ui.widget_roster.show()
-
-        def students_back():
-            self.ui.widget_students.hide()
-            self.ui.widget_roster.show()
-
-        def enrollment_back():
-            self.ui.widget_enrollment.hide()
-            self.ui.widget_roster.show()
-
-        def outlay_back():
-            self.ui.widget_outlay.hide()
-            self.ui.widget_roster.show()
+        def open_selected_docx():
+            current_tab = self.ui.tabWidget_Main.currentWidget()
+            content_list = current_tab.findChild(
+                QtWidgets.QWidget, "sAWContent_" + current_tab.objectName().split("_")[-1]).children()
+            docx_folder = ""
+            if "decree" in current_tab.objectName():
+                docx_folder = r'Приказы'
+            elif "note" in current_tab.objectName():
+                docx_folder = r'Записки'
+            elif "other" in current_tab.objectName():
+                docx_folder = r'Прочие'
+            for clb in content_list:
+                if clb.objectName().startswith("clb_") and clb.isChecked():
+                    command = f'"{os.getcwd()}\\Документы\\{docx_folder}\\{clb.text()}.docx"'
+                    open_file(command)
 
         # SETUP BUTS
         self.ui.pushButton_print_notes.clicked.connect(lambda: notes_print())
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_print())
+        self.ui.pushButton_edit_decree.clicked.connect(lambda: open_selected_docx())
+        self.ui.pushButton_edit_notes.clicked.connect(lambda: open_selected_docx())
+        self.ui.pushButton_edit_other.clicked.connect(lambda: open_selected_docx())
         self.ui.pushButton_print_timetable.clicked.connect(lambda: timetable_print())
         self.ui.pushButton_print_other.clicked.connect(lambda: other_print())
         self.ui.pushButton_update_other.clicked.connect(
@@ -992,7 +1010,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_ui.radio_col_2.clicked.connect(lambda: outlay_control_db())
         self.outlay_ui.radio_col_3.clicked.connect(lambda: outlay_control_db())
         self.outlay_ui.radio_col_4.clicked.connect(lambda: outlay_control_db())
-        self.outpr_ui.pushButton_save_doc.clicked.connect(lambda: self.create_outlay())
+        self.outlay_print_ui.pushButton_save_doc.clicked.connect(lambda: self.create_outlay())
 
     # END BUTTONS
 
@@ -1006,13 +1024,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_enrollment.hide()
         self.ui.widget_outlay.hide()
 
-    def load_list(self, dir, parent_list, first_name):
+    def load_list(self, _dir, parent_list, first_name):
         clear_list(parent_list.children())
-        list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + dir)
-        for docx in list_dir:
-            pos1 = docx.find('№')
-            doc_id = docx[pos1 + 1:pos1 + 6]
-            self.create_list_el("clb_" + first_name + doc_id, docx[:-5], parent_list)
+        list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + _dir)
+        for _docx in list_dir:
+            pos1 = _docx.find('№')
+            doc_id = _docx[pos1 + 1:pos1 + 7]
+            self.create_list_el("clb_" + first_name + doc_id, _docx[:-5], parent_list)
 
     def load_for_start(self):
         # Loading doc's for lists with doc's
@@ -1662,20 +1680,20 @@ class MainWindow(QtWidgets.QMainWindow):
             for sub in range(len(list_active_subs)):
                 if list_active_subs[sub][1] == "1":
                     _list_active_subs.append(str(list_active_subs[sub][0])[:])
-            for l in range(len(list_subs)):
+            for sub in range(len(list_subs)):
                 _sql2 = "SELECT student_numcontract, student_datecontract, status FROM subs_in_studs WHERE id_sub=" + \
-                        str(list_subs[l][0]) + " AND id_student=" + selected_enrollment
+                        str(list_subs[sub][0]) + " AND id_student=" + selected_enrollment
                 contracts1 = _db1.query(_sql2)
-                cb = self.create_check_box_el(self.enr_ui.groupBox_stud_subs, 'el_' + str(list_subs[l][0]),
-                                              list_subs[l][1],
-                                              True if str(list_subs[l][0]) in _list_active_subs else False)
+                cb = self.create_check_box_el(self.enr_ui.groupBox_stud_subs, 'el_' + str(list_subs[sub][0]),
+                                              list_subs[sub][1],
+                                              True if str(list_subs[sub][0]) in _list_active_subs else False)
                 self.enr_ui.list_cb_checked.append(
-                    [str(list_subs[l][0]), True if str(list_subs[l][0]) in _list_active_subs else False])
+                    [str(list_subs[sub][0]), True if str(list_subs[sub][0]) in _list_active_subs else False])
                 cb.clicked.connect(lambda: check_box_clicked())
                 gb = self.create_sub_groupbox(self.enr_ui.groupBox_sis_contracts,
-                                              "grB_" + str(list_subs[l][0]),
-                                              list_subs[l][1],
-                                              False if str(list_subs[l][0]) in _list_active_subs else True)
+                                              "grB_" + str(list_subs[sub][0]),
+                                              list_subs[sub][1],
+                                              False if str(list_subs[sub][0]) in _list_active_subs else True)
                 for chield in gb.children():
                     if "gL_" not in chield.objectName() and contracts1 != []:
                         if "ledit_grB_" in chield.objectName():
@@ -1707,13 +1725,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if stud_group != [['']] and stud_group is not None:
                 _sql = "SELECT id_prog FROM groups WHERE id_group=" + str(studs[2])
-                stud_group_prog_id = _db.query(_sql)
-                _sql = "SELECT prog_name FROM programs WHERE id_prog=" + str(stud_group_prog_id[0][0])
-                stud_group_prog_name = _db.query(_sql)
-                _sql = "SELECT prog_range FROM programs WHERE id_prog=" + str(stud_group_prog_id[0][0])
+                prog_id = _db.query(_sql)
+                _sql = "SELECT prog_name FROM programs WHERE id_prog=" + str(prog_id[0][0])
+                prog_name = _db.query(_sql)
+                _sql = "SELECT prog_range FROM programs WHERE id_prog=" + str(prog_id[0][0])
                 stud_group_prog_range = _db.query(_sql)
             else:
-                stud_group_prog_name = [['']]
+                prog_name = [['']]
                 stud_group_prog_range = [['']]
 
             _sql = "SELECT id_sub FROM subs_in_studs WHERE id_student=" + str(studs[0])
@@ -1735,13 +1753,12 @@ class MainWindow(QtWidgets.QMainWindow):
             studs[1] = 'ФИО: ' + studs[1] + '\n' if studs[1] is not None and studs[1] != '' else ''
             studs[2] = 'Группа: ' + stud_group[0][0] + '\n' if stud_group[0][0] is not None and stud_group[0][
                 0] != '' else ''
-            studs[3] = 'Программа: ' + stud_group_prog_name[0][0] + '\n' if stud_group_prog_name[0][0] is not None and \
-                                                                            stud_group_prog_name[0][
-                                                                                0] != '' else ''
+            studs[3] = 'Программа: ' + prog_name[0][0] + '\n' if prog_name[0][0] is not None and \
+                       prog_name[0][0] != '' else ''
             studs[4] = 'Продолжительность обучения: ' + stud_group_prog_range[0][0] + ' месяцев\n' if \
                 stud_group_prog_range[0][0] is not None and stud_group_prog_range[0][0] != '' else ''
-            studs[
-                5] = 'Предметы: ' + subjects + '\n' if subjects is not None and subjects != '' else 'Предметы: Отсутствуют\n'
+            studs[5] = 'Предметы: ' + subjects + '\n' \
+                if subjects is not None and subjects != '' else 'Предметы: Отсутствуют\n'
 
             searcher = ''
             if search_text is None or search_text == "":
@@ -1808,13 +1825,13 @@ class MainWindow(QtWidgets.QMainWindow):
             if _search_text is not None and _search_text != '':
                 _search_text = search_text.lower()
                 if _search_text in searcher:
-                    ttable_but = self.create_list_el("clb_ttible_" + str(timetable_info[i][0]),
-                                                     text,
-                                                     self.ui.sAWContent_timetable)
+                    self.create_list_el("clb_ttible_" + str(timetable_info[i][0]),
+                                        text,
+                                        self.ui.sAWContent_timetable)
             else:
-                ttable_but = self.create_list_el("clb_ttible_" + str(timetable_info[i][0]),
-                                                 text,
-                                                 self.ui.sAWContent_timetable)
+                self.create_list_el("clb_ttible_" + str(timetable_info[i][0]),
+                                    text,
+                                    self.ui.sAWContent_timetable)
         _db.close()
 
     # Loader database for exe_Timetable list
@@ -1952,6 +1969,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_db_timetable_list()
 
     def timetable_list_exec(self):
+        _set_doc_warning = 1
         for i in self.ui.sAWContent_timetable.children():
             if not i.objectName().startswith("clb_ttible_"):
                 pass
@@ -1977,20 +1995,21 @@ class MainWindow(QtWidgets.QMainWindow):
             # lEdit for class load
             _db1 = ARMDataBase()
             try:
-                _sql = "SELECT class FROM groups WHERE id_prog=" + str(self.outpr_ui.comboBox_prog.currentData())
-                group_class = _db1.query(_sql)
-                self.outpr_ui.lEdit_class.setText(group_class[0][0])
+                _sql1 = "SELECT class FROM groups WHERE id_prog=" + str(self.outlay_print_ui.comboBox_prog.currentData())
+                group_class = _db1.query(_sql1)
+                self.outlay_print_ui.lEdit_class.setText(group_class[0][0])
             except Exception:
-                self.outpr_ui.lEdit_class.setText("10")
+                self.outlay_print_ui.lEdit_class.setText("10")
             try:
-                _sql = "SELECT prog_range_dates FROM programs WHERE id_prog=" + str(self.outpr_ui.comboBox_prog.currentData())
-                dates = _db1.query(_sql)[0][0].split("|")
-                self.outpr_ui.dateEdit_date_start.setDate(datetime.date(int(dates[0].split('.')[2]),
-                                                                          int(dates[0].split('.')[1]),
-                                                                          int(dates[0].split('.')[0])))
-                self.outpr_ui.dateEdit_date_end.setDate(datetime.date(int(dates[1].split('.')[2]),
-                                                                        int(dates[1].split('.')[1]),
-                                                                        int(dates[1].split('.')[0])))
+                _sql1 = "SELECT prog_range_dates FROM programs WHERE id_prog=" + str(
+                    self.outlay_print_ui.comboBox_prog.currentData())
+                dates = _db1.query(_sql1)[0][0].split("|")
+                self.outlay_print_ui.dateEdit_date_start.setDate(datetime.date(int(dates[0].split('.')[2]),
+                                                                               int(dates[0].split('.')[1]),
+                                                                               int(dates[0].split('.')[0])))
+                self.outlay_print_ui.dateEdit_date_end.setDate(datetime.date(int(dates[1].split('.')[2]),
+                                                                             int(dates[1].split('.')[1]),
+                                                                             int(dates[1].split('.')[0])))
             except Exception:
                 pass
             _db1.close()
@@ -2000,60 +2019,60 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             selected = True
 
-        self.outpr_ui.comboBox_head.clear()
-        self.outpr_ui.comboBox_prog.clear()
-        self.outpr_ui.lEdit_class.setText("")
-        self.outpr_ui.comboBox_pfs.clear()
-        self.outpr_ui.comboBox_bookkeeper.clear()
-        self.outpr_ui.comboBox_manager_cpui.clear()
-        clear_widget(self.outpr_ui.widget_subs_teachs.children())
+        self.outlay_print_ui.comboBox_head.clear()
+        self.outlay_print_ui.comboBox_prog.clear()
+        self.outlay_print_ui.lEdit_class.setText("")
+        self.outlay_print_ui.comboBox_pfs.clear()
+        self.outlay_print_ui.comboBox_bookkeeper.clear()
+        self.outlay_print_ui.comboBox_manager_cpui.clear()
+        clear_widget(self.outlay_print_ui.widget_subs_teachs.children())
         _db = ARMDataBase()
 
         # comboBox for Head load
         _sql = "SELECT id_head, head_name, head_prof FROM headers"
         headers = _db.query(_sql)
         for head in headers:
-            self.create_combo_box_el(self.outpr_ui.comboBox_head, head[0], str(head[2]) + " | " + str(head[1]))
+            self.create_combo_box_el(self.outlay_print_ui.comboBox_head, head[0], str(head[2]) + " | " + str(head[1]))
             if "директор хти" in str(head[2]).lower():
-                self.outpr_ui.comboBox_head.setCurrentIndex(
-                    self.outpr_ui.comboBox_head.findData(head[0]))
+                self.outlay_print_ui.comboBox_head.setCurrentIndex(
+                    self.outlay_print_ui.comboBox_head.findData(head[0]))
 
         # DateEdit for Date Confirm
-        self.outpr_ui.dateEdit_date_confirm.setDate(datetime.datetime.today())
+        self.outlay_print_ui.dateEdit_date_confirm.setDate(datetime.datetime.today())
 
         # comboBox for Programs load
         _sql = "SELECT id_prog, prog_name, prog_range_dates FROM programs"
         programs = _db.query(_sql)
         for prog in programs:
-            self.create_combo_box_el(self.outpr_ui.comboBox_prog, prog[0], str(prog[1]))
+            self.create_combo_box_el(self.outlay_print_ui.comboBox_prog, prog[0], str(prog[1]))
         if selected:
-            self.outpr_ui.comboBox_prog.setCurrentIndex(
-                self.outpr_ui.comboBox_prog.findData(
+            self.outlay_print_ui.comboBox_prog.setCurrentIndex(
+                self.outlay_print_ui.comboBox_prog.findData(
                     self.outlay_ui.comboBox_progs.currentData()
                 ))
-        self.outpr_ui.comboBox_prog.currentIndexChanged.connect(lambda: setup_prog_info())
+        self.outlay_print_ui.comboBox_prog.currentIndexChanged.connect(lambda: setup_prog_info())
         setup_prog_info()
 
         # comboBox for PFS load
         for head in headers:
-            self.create_combo_box_el(self.outpr_ui.comboBox_pfs, head[0], str(head[2]) + " | " + str(head[1]))
+            self.create_combo_box_el(self.outlay_print_ui.comboBox_pfs, head[0], str(head[2]) + " | " + str(head[1]))
             if "пфс" in str(head[2]).lower():
-                self.outpr_ui.comboBox_pfs.setCurrentIndex(
-                    self.outpr_ui.comboBox_pfs.findData(head[0]))
+                self.outlay_print_ui.comboBox_pfs.setCurrentIndex(
+                    self.outlay_print_ui.comboBox_pfs.findData(head[0]))
 
         # comboBox for Bookkeeper load
         for head in headers:
-            self.create_combo_box_el(self.outpr_ui.comboBox_bookkeeper, head[0], str(head[2]) + " | " + str(head[1]))
+            self.create_combo_box_el(self.outlay_print_ui.comboBox_bookkeeper, head[0], str(head[2]) + " | " + str(head[1]))
             if "бухгалтер" in str(head[2]).lower():
-                self.outpr_ui.comboBox_bookkeeper.setCurrentIndex(
-                    self.outpr_ui.comboBox_bookkeeper.findData(head[0]))
+                self.outlay_print_ui.comboBox_bookkeeper.setCurrentIndex(
+                    self.outlay_print_ui.comboBox_bookkeeper.findData(head[0]))
 
         # comboBox for manager CPUI load
         for head in headers:
-            self.create_combo_box_el(self.outpr_ui.comboBox_manager_cpui, head[0], str(head[2]) + " | " + str(head[1]))
+            self.create_combo_box_el(self.outlay_print_ui.comboBox_manager_cpui, head[0], str(head[2]) + " | " + str(head[1]))
             if "цпюи" in str(head[2]).lower():
-                self.outpr_ui.comboBox_manager_cpui.setCurrentIndex(
-                    self.outpr_ui.comboBox_manager_cpui.findData(head[0]))
+                self.outlay_print_ui.comboBox_manager_cpui.setCurrentIndex(
+                    self.outlay_print_ui.comboBox_manager_cpui.findData(head[0]))
 
         # Widgets for subs and teachers load
         if not selected:
@@ -2120,6 +2139,8 @@ class MainWindow(QtWidgets.QMainWindow):
         gL_widget_calcbox = QtWidgets.QGridLayout(widget_calcbox)
         gL_widget_calcbox.setObjectName("gL_widget_calcbox_" + id_sub)
         studs_col = [['0']]
+
+        sub_info = []
 
         if sel_sub:
             _db = ARMDataBase()
@@ -2198,14 +2219,18 @@ class MainWindow(QtWidgets.QMainWindow):
         spin_hours.setSingleStep(2)
         gL_widget_calcbox.addWidget(spin_hours, 4, 1)
 
+        # noinspection PyUnresolvedReferences
         spin_studs.valueChanged.connect(lambda: self.calculate_values())
+        # noinspection PyUnresolvedReferences
         spin_hours.valueChanged.connect(lambda: self.calculate_values())
+        # noinspection PyUnresolvedReferences
         spin_tax.valueChanged.connect(lambda: self.calculate_values())
+        # noinspection PyUnresolvedReferences
         spin_price.valueChanged.connect(lambda: self.calculate_values())
         check_auto.clicked.connect(lambda: self.outlay_check_click())
 
         if sel_sub:
-            spin_studs.setValue(studs_col[0][0])
+            spin_studs.setValue(int(studs_col[0][0]))
             spin_price.setValue(int(sub_info[0][2]))
             spin_tax.setValue(int(sub_info[0][1]))
             spin_hours.setValue(int(sub_info[0][3]))
@@ -2214,7 +2239,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return widget_calcbox
 
     def add_sub_teach_box(self, sel_sub=False, id_sub="", i=0, j=0):
-        widget_sub_teach = QtWidgets.QWidget(self.outpr_ui.widget_subs_teachs)
+        widget_sub_teach = QtWidgets.QWidget(self.outlay_print_ui.widget_subs_teachs)
         widget_sub_teach.setObjectName("widget_sub_teach_" + id_sub)
         gL_widget_sub_teach = QtWidgets.QGridLayout(widget_sub_teach)
         gL_widget_sub_teach.setObjectName("gL_widget_sub_teach_" + id_sub)
@@ -2255,7 +2280,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             _db.close()
 
-        self.outpr_ui.gL_widget_subs_teachs.addWidget(widget_sub_teach, i, j)
+        self.outlay_print_ui.gL_widget_subs_teachs.addWidget(widget_sub_teach, i, j)
 
         return widget_sub_teach
 
@@ -2291,17 +2316,23 @@ class MainWindow(QtWidgets.QMainWindow):
                     j += 1
                 else:
                     for child in widget_calcbox.children():
-                        if child.objectName().startswith("spin_studs_") and self.outlay_ui.variability_list[i][0] != "":
+                        if child.objectName().startswith("spin_studs_") \
+                                and self.outlay_ui.variability_list[i][0] != "":
                             child.setValue(self.outlay_ui.variability_list[i][0])
-                        elif child.objectName().startswith("spin_price_") and self.outlay_ui.variability_list[i][1] != "":
+                        elif child.objectName().startswith("spin_price_") \
+                                and self.outlay_ui.variability_list[i][1] != "":
                             child.setValue(self.outlay_ui.variability_list[i][1])
-                        elif child.objectName().startswith("spin_tax_") and self.outlay_ui.variability_list[i][2] != "":
+                        elif child.objectName().startswith("spin_tax_") \
+                                and self.outlay_ui.variability_list[i][2] != "":
                             child.setValue(self.outlay_ui.variability_list[i][2])
-                        elif child.objectName().startswith("spin_hours_") and self.outlay_ui.variability_list[i][3] != "":
+                        elif child.objectName().startswith("spin_hours_") \
+                                and self.outlay_ui.variability_list[i][3] != "":
                             child.setValue(self.outlay_ui.variability_list[i][3])
-                        elif self.outlay_ui.variability_list[i][4] in child.objectName() and self.outlay_ui.variability_list[i][4] != "":
+                        elif self.outlay_ui.variability_list[i][4] in child.objectName() \
+                                and self.outlay_ui.variability_list[i][4] != "":
                             child.setChecked(True)
-                        elif child.objectName().startswith("check_auto_") and self.outlay_ui.variability_list[i][5] != "":
+                        elif child.objectName().startswith("check_auto_") \
+                                and self.outlay_ui.variability_list[i][5] != "":
                             child.setChecked(self.outlay_ui.variability_list[i][5])
                     i += 1
         self.outlay_check_click()
@@ -2316,32 +2347,63 @@ class MainWindow(QtWidgets.QMainWindow):
         i = 0
         for widget_calcbox in self.outlay_ui.widget_calcs.children():
             if widget_calcbox.objectName().startswith("widget_calcbox_") and i < 4:
-                if widget_calcbox.findChild(QtWidgets.QCheckBox, "check_auto_" + widget_calcbox.objectName().split("_")[-1]).isChecked():
+                if widget_calcbox.findChild(QtWidgets.QCheckBox,
+                                            "check_auto_" + widget_calcbox.objectName().split("_")[-1]).isChecked():
                     for child in widget_calcbox.children():
                         if child.objectName().startswith("radio_variability_tax_") \
                                 and child.isChecked() \
-                                and widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value() != 0:
-                            widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_tax_" + widget_calcbox.objectName().split("_")[-1]).setValue(round(
-                                (1/2*
-                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).value() *
-                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).value()) /
-                                widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value()))
+                                and widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                             "spin_hours_" + widget_calcbox.objectName().split("_")[
+                                                                 -1]).value() != 0:
+                            widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                     "spin_tax_" + widget_calcbox.objectName().split("_")[-1]).setValue(
+                                round(
+                                    (1 / 2 *
+                                     widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                              "spin_price_" + widget_calcbox.objectName().split("_")[
+                                                                  -1]).value() *
+                                     widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                              "spin_studs_" + widget_calcbox.objectName().split("_")[
+                                                                  -1]).value()) /
+                                    widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                             "spin_hours_" + widget_calcbox.objectName().split("_")[
+                                                                 -1]).value()))
                         elif child.objectName().startswith("radio_variability_price_") \
                                 and child.isChecked() \
-                                and widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).value() != 0:
-                            widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).setValue(round(
-                                (2*
-                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_tax_" + widget_calcbox.objectName().split("_")[-1]).value() *
-                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value()) /
-                                widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).value()))
+                                and widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                             "spin_studs_" + widget_calcbox.objectName().split("_")[
+                                                                 -1]).value() != 0:
+                            widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                     "spin_price_" + widget_calcbox.objectName().split("_")[
+                                                         -1]).setValue(round(
+                                (2 *
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                          "spin_tax_" + widget_calcbox.objectName().split("_")[
+                                                              -1]).value() *
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                          "spin_hours_" + widget_calcbox.objectName().split("_")[
+                                                              -1]).value()) /
+                                widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                         "spin_studs_" + widget_calcbox.objectName().split("_")[
+                                                             -1]).value()))
                         elif child.objectName().startswith("radio_variability_studs_") \
                                 and child.isChecked() \
-                                and widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).value() != 0:
-                            widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_studs_" + widget_calcbox.objectName().split("_")[-1]).setValue(round(
-                                (2*
-                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_hours_" + widget_calcbox.objectName().split("_")[-1]).value() *
-                                 widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_tax_" + widget_calcbox.objectName().split("_")[-1]).value()) /
-                                widget_calcbox.findChild(QtWidgets.QSpinBox, "spin_price_" + widget_calcbox.objectName().split("_")[-1]).value()))
+                                and widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                             "spin_price_" + widget_calcbox.objectName().split("_")[
+                                                                 -1]).value() != 0:
+                            widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                     "spin_studs_" + widget_calcbox.objectName().split("_")[
+                                                         -1]).setValue(round(
+                                (2 *
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                          "spin_hours_" + widget_calcbox.objectName().split("_")[
+                                                              -1]).value() *
+                                 widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                          "spin_tax_" + widget_calcbox.objectName().split("_")[
+                                                              -1]).value()) /
+                                widget_calcbox.findChild(QtWidgets.QSpinBox,
+                                                         "spin_price_" + widget_calcbox.objectName().split("_")[
+                                                             -1]).value()))
                 i += 1
         i = 0
         for widget_calcbox in self.outlay_ui.widget_calcs.children():
@@ -2370,17 +2432,29 @@ class MainWindow(QtWidgets.QMainWindow):
                 for child in widget_calcbox.children():
                     if child.objectName().startswith("check_auto_") \
                             and child.isChecked():
-                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton,
+                                                 "radio_variability_tax_" + widget_calcbox.objectName().split("_")[
+                                                     -1]).setEnabled(True)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton,
+                                                 "radio_variability_price_" + widget_calcbox.objectName().split("_")[
+                                                     -1]).setEnabled(True)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton,
+                                                 "radio_variability_studs_" + widget_calcbox.objectName().split("_")[
+                                                     -1]).setEnabled(True)
                     elif child.objectName().startswith("check_auto_") \
                             and not child.isChecked():
-                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_tax_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_price_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton, "radio_variability_studs_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
-
+                        widget_calcbox.findChild(QtWidgets.QRadioButton,
+                                                 "radio_variability_tax_" + widget_calcbox.objectName().split("_")[
+                                                     -1]).setEnabled(False)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton,
+                                                 "radio_variability_price_" + widget_calcbox.objectName().split("_")[
+                                                     -1]).setEnabled(False)
+                        widget_calcbox.findChild(QtWidgets.QRadioButton,
+                                                 "radio_variability_studs_" + widget_calcbox.objectName().split("_")[
+                                                     -1]).setEnabled(False)
 
     def create_outlay(self):
+        rb = 0
         if self.outlay_ui.radio_col_1.isChecked():
             rb = 1
         elif self.outlay_ui.radio_col_2.isChecked():
@@ -2391,15 +2465,15 @@ class MainWindow(QtWidgets.QMainWindow):
             rb = 4
         outlay_data = [{}, {}, {}, {}, {
             "count": rb,
-            "head": self.outpr_ui.comboBox_head.currentText(),
-            "date_confirm": self.outpr_ui.dateEdit_date_confirm.date().toString('dd.MM.yyyy'),
-            "program": self.outpr_ui.comboBox_prog.currentText(),
-            "class": self.outpr_ui.lEdit_class.text(),
-            "date_start": self.outpr_ui.dateEdit_date_start.date().toString('dd.MM.yyyy'),
-            "date_end": self.outpr_ui.dateEdit_date_end.date().toString('dd.MM.yyyy'),
-            "manager_cpui": self.outpr_ui.comboBox_manager_cpui.currentText(),
-            "bookkeeper": self.outpr_ui.comboBox_bookkeeper.currentText(),
-            "pfc": self.outpr_ui.comboBox_pfs.currentText()}]
+            "head": self.outlay_print_ui.comboBox_head.currentText(),
+            "date_confirm": self.outlay_print_ui.dateEdit_date_confirm.date().toString('dd.MM.yyyy'),
+            "program": self.outlay_print_ui.comboBox_prog.currentText(),
+            "class": self.outlay_print_ui.lEdit_class.text(),
+            "date_start": self.outlay_print_ui.dateEdit_date_start.date().toString('dd.MM.yyyy'),
+            "date_end": self.outlay_print_ui.dateEdit_date_end.date().toString('dd.MM.yyyy'),
+            "manager_cpui": self.outlay_print_ui.comboBox_manager_cpui.currentText(),
+            "bookkeeper": self.outlay_print_ui.comboBox_bookkeeper.currentText(),
+            "pfc": self.outlay_print_ui.comboBox_pfs.currentText()}]
         j = 0
         for i in self.outlay_ui.widget_calcs.children():
             if i.objectName().startswith("widget_calcbox_"):
@@ -2414,7 +2488,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         outlay_data[j]["hours"] = spin.value()
                 j += 1
         j = 0
-        for i in self.outpr_ui.widget_subs_teachs.children():
+        for i in self.outlay_print_ui.widget_subs_teachs.children():
             if i.objectName().startswith("widget_sub_teach_"):
                 for line in i.children():
                     if line.objectName().startswith("lEdit_sub_name_"):
@@ -2449,7 +2523,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 class OutlayCreate:
     def __call__(self, outlay_data):
-        path, filename = create_outlay_doc(outlay_data)
+        create_outlay_doc(outlay_data)
 
 
 def create_outlay_doc(outlay_data):
@@ -2492,7 +2566,6 @@ def create_outlay_doc(outlay_data):
         date_confirm = 'ноября'
     elif outlay_data[4]['date_confirm'][3:5] == "12":
         date_confirm = 'декабря'
-
 
     doc.sections[0].page_height = docx.shared.Cm(29.7)
     doc.sections[0].page_width = docx.shared.Cm(21)
@@ -2593,7 +2666,6 @@ def create_outlay_doc(outlay_data):
     cell.paragraphs[1].runs[4].font.name = "Times New Roman"
     cell.paragraphs[1].runs[4].font.size = docx.shared.Pt(14)
 
-
     cell.paragraphs[1].paragraph_format.space_after = docx.shared.Pt(0)
     cell.paragraphs[1].paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
     tab_head.rows[1].height = docx.shared.Cm(1.1)
@@ -2624,14 +2696,14 @@ def create_outlay_doc(outlay_data):
     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     par = doc.add_paragraph(
-    f"«{outlay_data[4]['program']}» ({outlay_data[4]['class']} класс)")
+        f"«{outlay_data[4]['program']}» ({outlay_data[4]['class']} класс)")
     par.runs[0].font.name = "Times New Roman"
     par.runs[0].font.size = docx.shared.Pt(14)
     par.paragraph_format.space_after = docx.shared.Pt(0)
     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     par = doc.add_paragraph(
-    f"(с {outlay_data[4]['date_start']} г. по {outlay_data[4]['date_end']} г.)")
+        f"(с {outlay_data[4]['date_start']} г. по {outlay_data[4]['date_end']} г.)")
     par.runs[0].font.name = "Times New Roman"
     par.runs[0].font.size = docx.shared.Pt(14)
     par.paragraph_format.space_after = docx.shared.Pt(0)
@@ -2646,11 +2718,13 @@ def create_outlay_doc(outlay_data):
     # TABLE OUTLAY
     def create_cell(text, __cell, __rows, _width, _height, font_size=14, font_name="Times New Roman",
                     text_alignment=WD_ALIGN_PARAGRAPH.CENTER, cell_alignment=WD_ALIGN_VERTICAL.CENTER,
-                    line_spacing=WD_LINE_SPACING.SINGLE, __space_after=0):
+                    line_spacing=WD_LINE_SPACING.SINGLE, __space_after=0, underline=False, bold=False):
         __cell.text = text
         __cell.paragraphs[0].runs[0].font.name = font_name
         __cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(font_size)
         __cell.paragraphs[0].paragraph_format.line_spacing_rule = line_spacing
+        __cell.paragraphs[0].runs[0].font.underline = underline
+        __cell.paragraphs[0].runs[0].font.bold = bold
         __cell.paragraphs[0].alignment = text_alignment
         __cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(__space_after)
         __cell.vertical_alignment = cell_alignment
@@ -2677,13 +2751,15 @@ def create_outlay_doc(outlay_data):
     create_cell("общий доход",
                 tab_outlay.cell(1, 1), tab_outlay.rows[1], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
     create_cell(" ", tab_outlay.cell(1, 2), tab_outlay.rows[1], 4.26, 0.53)
-    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(1, 3), tab_outlay.rows[1], 2.6, 0.53, font_size=12)
+    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(1, 3), tab_outlay.rows[1], 2.6, 0.53,
+                font_size=12)
 
     create_cell(" ", tab_outlay.cell(2, 0), tab_outlay.rows[2], 1.69, 0.53)
     create_cell("расходы, всего в том числе:",
                 tab_outlay.cell(2, 1), tab_outlay.rows[2], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
     create_cell("100,00", tab_outlay.cell(2, 2), tab_outlay.rows[2], 4.26, 0.53, font_size=12)
-    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(2, 3), tab_outlay.rows[2], 2.6, 0.53, font_size=12)
+    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(2, 3), tab_outlay.rows[2], 2.6, 0.53,
+                font_size=12)
 
     try:
         otfot = cost / profit * 100
@@ -2756,8 +2832,8 @@ def create_outlay_doc(outlay_data):
 
     create_cell("Зав. ЦПЮИ", tab_approve.cell(0, 0), tab_approve.rows[1], 11.94, 1.12,
                 text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. " \
-                f"{outlay_data[4]['manager_cpui'].split(' ')[-1][:1]}. " \
+    create_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. "
+                f"{outlay_data[4]['manager_cpui'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['manager_cpui'].split(' ')[-3]}",
                 tab_approve.cell(0, 1), tab_approve.rows[0], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
@@ -2770,8 +2846,8 @@ def create_outlay_doc(outlay_data):
 
     create_cell("Гл. бухгалтер", tab_approve.cell(3, 0), tab_approve.rows[3], 11.94, 1.12,
                 text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['bookkeeper'].split(' ')[-2][:1]}. " \
-                f"{outlay_data[4]['bookkeeper'].split(' ')[-1][:1]}. " \
+    create_cell(f"{outlay_data[4]['bookkeeper'].split(' ')[-2][:1]}. "
+                f"{outlay_data[4]['bookkeeper'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['bookkeeper'].split(' ')[-3]}",
                 tab_approve.cell(3, 1), tab_approve.rows[3], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
@@ -2780,8 +2856,8 @@ def create_outlay_doc(outlay_data):
 
     create_cell("Зав. ПФС", tab_approve.cell(5, 0), tab_approve.rows[5], 11.94, 1.12,
                 text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. " \
-                f"{outlay_data[4]['pfc'].split(' ')[-1][:1]}. " \
+    create_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. "
+                f"{outlay_data[4]['pfc'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['pfc'].split(' ')[-3]}",
                 tab_approve.cell(5, 1), tab_approve.rows[5], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
@@ -2796,14 +2872,209 @@ def create_outlay_doc(outlay_data):
     doc.sections[1].left_margin = docx.shared.Cm(1.25)
     doc.sections[1].bottom_margin = docx.shared.Cm(1.5)
 
-    par = doc.add_paragraph(" TAKS ")
-    par.runs[0].bold = True
+    par = doc.add_paragraph("Пояснение к смете")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    par = doc.add_paragraph("Планирование доходов")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    plan_profit = doc.add_table(rows=2 + outlay_data[4]['count'], cols=4, style='Table Grid')
+    plan_profit.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    create_cell(f"предмет",
+                plan_profit.cell(0, 0), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    create_cell(f"Стоимость, руб.",
+                plan_profit.cell(0, 1), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    create_cell(f" ",
+                plan_profit.cell(0, 2), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    plan_profit.cell(0, 2).add_paragraph(f"Количество слушателей, чел.")
+    plan_profit.cell(0, 2).paragraphs[-1].runs[0].font.name = "Times New Roman"
+    plan_profit.cell(0, 2).paragraphs[-1].runs[0].font.size = docx.shared.Pt(12)
+    plan_profit.cell(0, 2).paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    create_cell(f" ",
+                plan_profit.cell(0, 3), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    plan_profit.cell(0, 3).add_paragraph(f"Планируемый доход, руб.")
+    plan_profit.cell(0, 3).paragraphs[-1].runs[0].font.name = "Times New Roman"
+    plan_profit.cell(0, 3).paragraphs[-1].runs[0].font.size = docx.shared.Pt(12)
+    plan_profit.cell(0, 3).paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    for row_sub in range(outlay_data[4]['count']):
+        sub_profit = float(outlay_data[row_sub]['studs'] * outlay_data[row_sub]['price'])
+        if len(str(round(sub_profit, 2)).split(".")[-1]) < 2:
+            zero = "0"
+        else:
+            zero = ""
+        create_cell(outlay_data[row_sub]['subject'],
+                    plan_profit.cell(row_sub + 1, 0), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+        create_cell(str(outlay_data[row_sub]['price']),
+                    plan_profit.cell(row_sub + 1, 1), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+        create_cell(str(outlay_data[row_sub]['studs']),
+                    plan_profit.cell(row_sub + 1, 2), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+        create_cell(str(round(sub_profit, 2)).replace(".", ",") + zero,
+                    plan_profit.cell(row_sub + 1, 3), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+
+    if len(str(round(profit, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell("Итого",
+                plan_profit.cell(outlay_data[4]['count'] + 1, 0), plan_profit.rows[outlay_data[4]['count'] + 1],
+                4.25, 0.45, font_size=12)
+    create_cell(" ",
+                plan_profit.cell(outlay_data[4]['count'] + 1, 1), plan_profit.rows[outlay_data[4]['count'] + 1],
+                4.25, 0.45, font_size=12)
+    create_cell(" ",
+                plan_profit.cell(outlay_data[4]['count'] + 1, 2), plan_profit.rows[outlay_data[4]['count'] + 1],
+                4.25, 0.45, font_size=12)
+    create_cell(str(round(profit, 2)).replace(".", ",") + zero,
+                plan_profit.cell(outlay_data[4]['count'] + 1, 3), plan_profit.rows[outlay_data[4]['count'] + 1],
+                4.25, 0.45, font_size=12, bold=True)
+
+    # THIRD TABLE
+    par = doc.add_paragraph(" ")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    par = doc.add_paragraph("Распределение и оплата часов")
+    par.runs[0].font.name = "Times New Roman"
+    par.runs[0].font.size = docx.shared.Pt(14)
+    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    payment_for_hours = doc.add_table(rows=3 + outlay_data[4]['count'], cols=9, style='Table Grid')
+    payment_for_hours.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    create_cell(" ", payment_for_hours.cell(0, 0), payment_for_hours.rows[0], 3.53, 0.93, font_size=12)
+    create_cell("ФИО", payment_for_hours.cell(0, 1), payment_for_hours.rows[0], 4.0, 0.93, font_size=12)
+    create_cell("ауд. занятия", payment_for_hours.cell(0, 2), payment_for_hours.rows[0], 2.25, 0.93, font_size=12)
+    create_cell("Всего час", payment_for_hours.cell(0, 3), payment_for_hours.rows[0], 1.75, 0.93, font_size=12)
+    create_cell("Стоимость 1 ч. руб.", payment_for_hours.cell(0, 4), payment_for_hours.rows[0], 3, 0.93, font_size=12)
+    create_cell("Сумма, руб.", payment_for_hours.cell(0, 5), payment_for_hours.rows[0], 2.75, 0.93, font_size=12)
+    create_cell("Начисления на оплату труда, %", payment_for_hours.cell(0, 6), payment_for_hours.rows[0],
+                3.5, 0.93, font_size=12)
+    create_cell("Сумма, руб.", payment_for_hours.cell(0, 7), payment_for_hours.rows[0], 2.5, 0.93, font_size=12)
+    create_cell("Всего, руб.", payment_for_hours.cell(0, 8), payment_for_hours.rows[0], 3, 0.93, font_size=12)
+
+    create_cell("ППС", payment_for_hours.cell(1, 0), payment_for_hours.rows[0], 3.53, 0.45, font_size=12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(" ", payment_for_hours.cell(1, 1), payment_for_hours.rows[0], 4.0, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(1, 2), payment_for_hours.rows[0], 2.25, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(1, 3), payment_for_hours.rows[0], 1.75, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(1, 4), payment_for_hours.rows[0], 3, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(1, 5), payment_for_hours.rows[0], 2.75, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(1, 6), payment_for_hours.rows[0], 3.5, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(1, 7), payment_for_hours.rows[0], 2.5, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(1, 8), payment_for_hours.rows[0], 3, 0.45, font_size=12)
+
+    for row_sub in range(outlay_data[4]['count']):
+        try:
+            teacher = f"{outlay_data[row_sub]['teacher'].split(' ')[1][0:1]}. " \
+                      f"{outlay_data[row_sub]['teacher'].split(' ')[2][0:1]}. " \
+                      f"{outlay_data[row_sub]['teacher'].split(' ')[0]}"
+        except IndexError:
+            teacher = " "
+        tax = outlay_data[row_sub]['tax']
+        hours = outlay_data[row_sub]['hours']
+        price_before_ofot = float(hours * tax)
+        if len(str(round(price_before_ofot, 2)).split(".")[-1]) < 2:
+            zero = "0"
+        else:
+            zero = ""
+        create_cell("Преподаватель", payment_for_hours.cell(row_sub + 2, 0), payment_for_hours.rows[row_sub + 2],
+                    3.53, 0.45, font_size=12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+        create_cell(teacher, payment_for_hours.cell(row_sub + 2, 1), payment_for_hours.rows[row_sub + 2],
+                    4.0, 0.45, font_size=12)
+        create_cell(str(hours), payment_for_hours.cell(row_sub + 2, 2), payment_for_hours.rows[row_sub + 2],
+                    2.25, 0.45, font_size=12)
+        create_cell(str(hours), payment_for_hours.cell(row_sub + 2, 3), payment_for_hours.rows[row_sub + 2],
+                    1.75, 0.45, font_size=12)
+        create_cell(str(tax), payment_for_hours.cell(row_sub + 2, 4), payment_for_hours.rows[row_sub + 2],
+                    3, 0.45, font_size=12)
+        create_cell(str(round(price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 5),
+                    payment_for_hours.rows[row_sub + 2], 2.75, 0.45, font_size=12)
+        create_cell("30,2", payment_for_hours.cell(row_sub + 2, 6), payment_for_hours.rows[row_sub + 2],
+                    3.5, 0.45, font_size=12)
+        price_ofot = float(price_before_ofot * 0.302)
+        if len(str(round(price_before_ofot, 2)).split(".")[-1]) < 2:
+            zero = "0"
+        else:
+            zero = ""
+        create_cell(str(round(price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 7),
+                    payment_for_hours.rows[row_sub + 2], 2.5, 0.45, font_size=12)
+        price_after_ofot = float(price_ofot + price_before_ofot)
+        if len(str(round(price_after_ofot, 2)).split(".")[-1]) < 2:
+            zero = "0"
+        else:
+            zero = ""
+        create_cell(str(round(price_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 8),
+                    payment_for_hours.rows[row_sub + 2], 3, 0.45, font_size=12)
+
+    last_row = outlay_data[4]['count'] + 2
+    create_cell(" ", payment_for_hours.cell(last_row, 0),
+                payment_for_hours.rows[last_row], 3.53, 0.45, font_size=12)
+    create_cell("Всего ППС", payment_for_hours.cell(last_row, 1), payment_for_hours.rows[last_row], 4.0, 0.45,
+                font_size=12, bold=True)
+    create_cell(" ", payment_for_hours.cell(last_row, 2), payment_for_hours.rows[last_row], 2.25, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(last_row, 3), payment_for_hours.rows[last_row], 1.75, 0.45, font_size=12)
+    create_cell(" ", payment_for_hours.cell(last_row, 4), payment_for_hours.rows[last_row], 3, 0.45, font_size=12)
+    sum_price_before_ofot = 0.0
+    for i in range(outlay_data[4]['count']):
+        sum_price_before_ofot += float(outlay_data[i]['hours'] * outlay_data[i]['tax'])
+    if len(str(round(sum_price_before_ofot, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(str(round(sum_price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 5),
+                payment_for_hours.rows[last_row], 2.75, 0.45, font_size=12, bold=True)
+    create_cell(" ", payment_for_hours.cell(last_row, 6), payment_for_hours.rows[last_row], 3.5, 0.45, font_size=12)
+    sum_price_ofot = float(sum_price_before_ofot * 0.302)
+    if len(str(round(sum_price_ofot, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(str(round(sum_price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 7),
+                payment_for_hours.rows[last_row], 2.5, 0.45, font_size=12, bold=True)
+    sum_after_ofot = float(sum_price_ofot + sum_price_before_ofot)
+    if len(str(round(sum_after_ofot, 2)).split(".")[-1]) < 2:
+        zero = "0"
+    else:
+        zero = ""
+    create_cell(str(round(sum_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 8),
+                payment_for_hours.rows[last_row], 3, 0.45, font_size=12, bold=True)
+
+    # SECOND HEADERS
+    par = doc.add_paragraph(" ")
     par.runs[0].font.name = "Times New Roman"
     par.runs[0].font.size = docx.shared.Pt(14)
 
+    tab_approve = doc.add_table(rows=3, cols=2)
+
+    create_cell("Зав. ЦПЮИ", tab_approve.cell(0, 0), tab_approve.rows[1], 11, 1.12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. "
+                f"{outlay_data[4]['manager_cpui'].split(' ')[-1][:1]}. "
+                f"{outlay_data[4]['manager_cpui'].split(' ')[-3]}",
+                tab_approve.cell(0, 1), tab_approve.rows[0], 6, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+
+    create_cell("Согласовано:", tab_approve.cell(1, 0), tab_approve.rows[1], 11, 1.12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(" ", tab_approve.cell(1, 1), tab_approve.rows[1], 6, 1.12)
+
+    create_cell("Зав. ПФС", tab_approve.cell(2, 0), tab_approve.rows[2], 11, 1.12,
+                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    create_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. "
+                f"{outlay_data[4]['pfc'].split(' ')[-1][:1]}. "
+                f"{outlay_data[4]['pfc'].split(' ')[-3]}",
+                tab_approve.cell(2, 1), tab_approve.rows[2], 6, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+
+    # SETTINGS FOR DOCX
     properties = doc.core_properties
     properties.author = "ЦПЮИ ХТИ"
-
+    # DOCX SAVE
     doc.save(path + filename)
     return path, filename
 
@@ -2818,7 +3089,24 @@ def create_timetable(sub):
 
 class TimetableCreate:
     def __call__(self, sub):
-        path, filename = create_timetable_doc(sub)
+        create_timetable_doc(sub)
+
+
+def open_file(command):
+    thread_list = []
+    task = threading.Thread(target=OpenFile(), args=(command,))
+    thread_list.append(task)
+    task.deamon = True
+    task.start()
+
+
+class OpenFile:
+    def __call__(self, command):
+        open_file_function(command)
+
+
+def open_file_function(command):
+    os.system(command)
 
 
 def create_timetable_doc(_sub):
@@ -2954,19 +3242,19 @@ def create_timetable_doc(_sub):
                 par1.runs[0].bold = True
                 par1.runs[0].font.name = "Times New Roman"
                 par1.runs[0].font.size = docx.shared.Pt(14)
-            elif len(students) < 13 and j%2 == 1:
+            elif len(students) < 13 and j % 2 == 1:
                 par = doc.add_paragraph('_')
                 par.runs[0].add_break(docx.enum.text.WD_BREAK.PAGE)
                 par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
                 par1.runs[0].bold = True
                 par1.runs[0].font.name = "Times New Roman"
                 par1.runs[0].font.size = docx.shared.Pt(14)
-            elif len(students) == 13 and j%2 == 0:
+            elif len(students) == 13 and j % 2 == 0:
                 par = doc.add_paragraph('_')
                 par.runs[0].font.size = docx.shared.Pt(1)
                 par.paragraph_format.space_after = docx.shared.Pt(0)
                 par.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-            elif len(students) == 13 and j%2 == 1:
+            elif len(students) == 13 and j % 2 == 1:
                 par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
                 par1.runs[0].bold = True
                 par1.runs[0].font.name = "Times New Roman"
@@ -3154,8 +3442,11 @@ def clear_group_box(group_box):
 def clear_widget(widget):
     for i in widget:
         if i.objectName().startswith('widget_'):
+            i.setObjectName('deleteLater_this_widget')
+            i.deleteLater()
             i.setAttribute(55, 1)
             i.close()
+            del i
 
 
 # Func for print docs
