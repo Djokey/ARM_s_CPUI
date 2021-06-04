@@ -8,6 +8,15 @@ import datetime
 import docx
 import res
 
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5 import QtCore, QtGui, QtWidgets
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.table import _Cell
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
+
+# My UI includes
 from ui import *
 from headers_ui import *
 from programs_ui import *
@@ -19,14 +28,8 @@ from enrollment_ui import *
 from outlay_ui import *
 from timetable_edit_ui import *
 from outlay_printer_ui import *
+# My DataBase controller
 from arm_db import *
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5 import QtCore, QtGui, QtWidgets
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.table import _Cell
-from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
 
 
 # Class for main window application
@@ -269,11 +272,23 @@ class MainWindow(QtWidgets.QMainWindow):
                     group_name = "Нет группы с этой программой"
 
                 copy_index = 0
-                filename = "Расписание " + group_name + " " + timetable[0][0] + ".docx"
+                filename = "Расписание " + group_name + " " + timetable[0][0] + " №000000.docx"
                 desk_list_dir = os.listdir(path)
-                while filename in desk_list_dir:
+                indexes_list = []
+                for doc_in_dir in desk_list_dir:
+                    start_index = doc_in_dir.find('№')
+                    if start_index:
+                        try:
+                            indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+                        except Exception:
+                            pass
+                copy_index = 0
+                while copy_index in indexes_list:
                     copy_index += 1
-                    filename = "Расписание " + group_name + " " + timetable[0][0] + " (" + str(copy_index) + ").docx"
+                    str_copy_index = str(copy_index)
+                    while len(str_copy_index) < 6:
+                        str_copy_index = "0" + str_copy_index
+                    filename = f"Расписание {group_name} {timetable[0][1]} №{str_copy_index}.docx"
                 _db.close()
                 set_doc_warning("Отправлено",
                                 'Документ будет сохранен в прочие документы.\n'
@@ -924,6 +939,21 @@ class MainWindow(QtWidgets.QMainWindow):
                     command = f'"{os.getcwd()}\\Документы\\{docx_folder}\\{clb.text()}.docx"'
                     open_file(command)
 
+        def search_element(parent):
+            items = []
+            parent_widget = self.ui.tabWidget_Main.findChild(QtWidgets.QWidget, "sAWContent_" + parent).children()
+            for item in parent_widget:
+                if item.objectName().startswith("clb_"):
+                    items.append(item)
+            _search_text = self.ui.tabWidget_Main.findChild(
+                QtWidgets.QWidget, "lineEdit_search_" + parent).text().lower()
+            for i in items:
+                searcher = i.text().lower()
+                if _search_text in searcher:
+                    i.show()
+                else:
+                    i.hide()
+
         # SETUP BUTS
         self.ui.pushButton_print_notes.clicked.connect(lambda: notes_print())
         self.ui.pushButton_print_decree.clicked.connect(lambda: decree_print())
@@ -938,6 +968,9 @@ class MainWindow(QtWidgets.QMainWindow):
             lambda: self.load_list(r'Приказы', self.ui.sAWContent_decree, 'decree_'))
         self.ui.pushButton_update_notes.clicked.connect(
             lambda: self.load_list(r'Записки', self.ui.sAWContent_notes, 'note_'))
+        self.ui.lineEdit_search_notes.textEdited.connect(lambda: search_element("notes"))
+        self.ui.lineEdit_search_decree.textEdited.connect(lambda: search_element("decree"))
+        self.ui.lineEdit_search_other.textEdited.connect(lambda: search_element("other"))
 
         self.ui.pushButton_update_timetable.clicked.connect(
             lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
@@ -1028,10 +1061,25 @@ class MainWindow(QtWidgets.QMainWindow):
     def load_list(self, _dir, parent_list, first_name):
         clear_list(parent_list.children())
         list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + _dir)
+        items = []
         for _docx in list_dir:
-            pos1 = _docx.find('№')
-            doc_id = _docx[pos1 + 1:pos1 + 7]
-            self.create_list_el("clb_" + first_name + doc_id, _docx[:-5], parent_list)
+            if not _docx.startswith("~$"):
+                pos1 = _docx.find('№')
+                doc_id = _docx[pos1 + 1:pos1 + 7]
+                items.append(self.create_list_el("clb_" + first_name + doc_id, _docx[:-5], parent_list))
+
+
+        _search_text = self.ui.tabWidget_Main.findChild(
+            QtWidgets.QWidget, "lineEdit_search_" + parent_list.objectName().split("_")[-1]).text().lower()
+
+        for i in items:
+            searcher = i.text().lower()
+            if _search_text in searcher:
+                i.show()
+            else:
+                i.hide()
+
+
 
     def load_for_start(self):
         # Loading doc's for lists with doc's
@@ -2500,13 +2548,24 @@ class MainWindow(QtWidgets.QMainWindow):
 
         path = os.getcwd() + r"/Документы/Прочие/"
         filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
-                   f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]}.docx"
+                   f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} №000000.docx"
         desk_list_dir = os.listdir(path)
+        indexes_list = []
+        for doc_in_dir in desk_list_dir:
+            start_index = doc_in_dir.find('№')
+            if start_index:
+                try:
+                    indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+                except Exception:
+                    pass
         copy_index = 0
-        while filename in desk_list_dir:
+        while copy_index in indexes_list:
             copy_index += 1
+            str_copy_index = str(copy_index)
+            while len(str_copy_index) < 6:
+                str_copy_index = "0" + str_copy_index
             filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
-                       f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} ({str(copy_index)}).docx"
+                       f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} №{str_copy_index}.docx"
 
         self.outlay_printer.close()
         set_doc_warning("Отправлено",
@@ -2530,14 +2589,25 @@ class OutlayCreate:
 def create_outlay_doc(outlay_data):
     path = os.getcwd() + r"/Документы/Прочие/"
 
-    copy_index = 0
     filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
-               f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]}.docx"
+               f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} №000000.docx"
     desk_list_dir = os.listdir(path)
-    while filename in desk_list_dir:
+    indexes_list = []
+    for doc_in_dir in desk_list_dir:
+        start_index = doc_in_dir.find('№')
+        if start_index:
+            try:
+                indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+            except Exception:
+                pass
+    copy_index = 0
+    while copy_index in indexes_list:
         copy_index += 1
+        str_copy_index = str(copy_index)
+        while len(str_copy_index) < 6:
+            str_copy_index = "0" + str_copy_index
         filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
-                   f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} ({str(copy_index)}).docx"
+                   f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} №{str_copy_index}.docx"
 
     doc = docx.Document()
 
@@ -2620,7 +2690,7 @@ def create_outlay_doc(outlay_data):
     cell.width = docx.shared.Cm(2.1)
     set_cell_border(
         cell,
-        bottom={"sz": 12, "val": "single", "color": "#000000"}
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
     )
 
     cell = tab_head.cell(2, 1)
@@ -3000,7 +3070,7 @@ def create_outlay_doc(outlay_data):
         create_cell("30,2", payment_for_hours.cell(row_sub + 2, 6), payment_for_hours.rows[row_sub + 2],
                     3.5, 0.45, font_size=12)
         price_ofot = float(price_before_ofot * 0.302)
-        if len(str(round(price_before_ofot, 2)).split(".")[-1]) < 2:
+        if len(str(round(price_ofot, 2)).split(".")[-1]) < 2:
             zero = "0"
         else:
             zero = ""
@@ -3037,7 +3107,7 @@ def create_outlay_doc(outlay_data):
         zero = "0"
     else:
         zero = ""
-    create_cell(str(round(sum_price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 7),
+    create_cell(str(round(sum_price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 7),
                 payment_for_hours.rows[last_row], 2.5, 0.45, font_size=12, bold=True)
     sum_after_ofot = float(sum_price_ofot + sum_price_before_ofot)
     if len(str(round(sum_after_ofot, 2)).split(".")[-1]) < 2:
@@ -3130,12 +3200,23 @@ def create_timetable_doc(_sub):
     students_q = _db.query(_sql)
     students = []
 
-    copy_index = 0
-    filename = "Расписание " + group_name + " " + timetable[0][1] + ".docx"
+    filename = "Расписание " + group_name + " " + timetable[0][1] + " №000000.docx"
     desk_list_dir = os.listdir(path)
-    while filename in desk_list_dir:
+    indexes_list = []
+    for doc_in_dir in desk_list_dir:
+        start_index = doc_in_dir.find('№')
+        if start_index:
+            try:
+                indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+            except Exception:
+                pass
+    copy_index = 0
+    while copy_index in indexes_list:
         copy_index += 1
-        filename = "Расписание " + group_name + " " + timetable[0][1] + " (" + str(copy_index) + ").docx"
+        str_copy_index = str(copy_index)
+        while len(str_copy_index) < 6:
+            str_copy_index = "0" + str_copy_index
+        filename = f"Расписание {group_name} {timetable[0][1]} №{str_copy_index}.docx"
 
     for i in range(len(students_q)):
         students.append([str(students_q[i][0])])
