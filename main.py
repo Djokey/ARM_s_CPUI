@@ -28,6 +28,8 @@ from enrollment_ui import *
 from outlay_ui import *
 from timetable_edit_ui import *
 from outlay_printer_ui import *
+from decree_enrollment import *
+from decree_creator_ui import *
 # My DataBase controller
 from arm_db import *
 
@@ -93,6 +95,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_print_ui.setupUi(self.outlay_printer)
         self.outlay_printer.setWindowTitle('Редактор сметы')
 
+        self.decree_creator = QtWidgets.QDialog(self)
+        self.decree_ui = Ui_DecreeCreator()
+        self.decree_ui.setupUi(self.decree_creator)
+        self.decree_creator.setWindowTitle('Редактор приказов')
+
+        self.decree_ui.widget_enrollment = QtWidgets.QWidget()
+        self.decree_ui.not_main.addWidget(self.decree_ui.widget_enrollment)
+        self.decree_enr_ui = Ui_DecreeEnrollment()
+        self.decree_enr_ui.setupUi(self.decree_ui.widget_enrollment)
+
         self.disk_dir = os.getenv("SystemDrive")
         self.user = os.environ.get("USERNAME")
         self.dir = os.path.abspath(os.curdir)
@@ -145,6 +157,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_enrollment.show()
         self.load_db_enrollment()
 
+    # Func for edit database table Enrollment
+    def decree_enr_win(self):
+        self.decree_ui.widget_main.hide()
+        self.decree_ui.widget_enrollment.show()
+        self.load_db_decree_enr()
+
     # Func for edit database table Outlay
     def outlay_win(self):
         self.ui.widget_roster.hide()
@@ -180,6 +198,10 @@ class MainWindow(QtWidgets.QMainWindow):
         def enrollment_back():
             self.ui.widget_enrollment.hide()
             self.ui.widget_roster.show()
+
+        def decree_enr_back():
+            self.decree_ui.widget_enrollment.hide()
+            self.decree_ui.widget_main.show()
 
         def outlay_back():
             self.ui.widget_outlay.hide()
@@ -482,12 +504,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     _db = ARMDataBase()
                     _sql = "UPDATE teachers SET " \
-                           "teach_name = '{0}', " \
-                           "teach_phone = '{1}', " \
-                           "teach_mail = '{2}', " \
-                           "teach_web = '{3}', " \
-                           "teach_prof = '{4}' " \
-                           "WHERE id_teach = '{5}'".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
+                           "teacher_name = '{0}', " \
+                           "teacher_phone = '{1}', " \
+                           "teacher_mail = '{2}', " \
+                           "teacher_web = '{3}', " \
+                           "teacher_prof = '{4}' " \
+                           "WHERE id_teacher = '{5}'".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
                                                            self.teach_ui.textEdit_teachers_phone.toPlainText(),
                                                            self.teach_ui.textEdit_teachers_mail.toPlainText(),
                                                            self.teach_ui.textEdit_teachers_web.toPlainText(),
@@ -530,6 +552,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                     '"Удалить выбранную запись"')
                 else:
                     _db = ARMDataBase()
+                    _sql = "UPDATE subjects SET id_teacher='1' WHERE id_teacher={0}".format(teachers_selected)
+                    _db.query(_sql)
                     _sql = "DELETE FROM teachers WHERE id_teacher={0}".format(teachers_selected)
                     _db.query(_sql)
                     _db.close()
@@ -609,9 +633,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     _sql = "SELECT id_student FROM students WHERE id_group=" + groups_selected
                     studs = _db.query(_sql)
                     for stud in studs:
-                        _sql = "UPDATE students SET id_group='1' WHERE id_student=" + stud[0]
+                        _sql = "UPDATE students SET id_group='1' WHERE id_student=" + str(stud[0])
                         _db.query(_sql)
-                        _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + stud[0]
+                        _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + str(stud[0])
                         _db.query(_sql)
                     _sql = "DELETE FROM groups WHERE id_group={0}".format(groups_selected)
                     _db.query(_sql)
@@ -832,8 +856,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                 '"Сохранить в выбранную запись"')
             else:
                 for enrollment in self.enr_ui.list_cb_checked:
-                    _sql = "SELECT id_sis FROM subs_in_studs WHERE id_student=" + enrollment_selected + " AND id_sub=" + \
-                           enrollment[0]
+                    _sql = "SELECT id_sis FROM subs_in_studs WHERE id_student=" + enrollment_selected + \
+                           " AND id_sub=" + enrollment[0]
                     check_sis = _db.query(_sql)
                     if check_sis:
                         _sql = "UPDATE subs_in_studs SET " \
@@ -971,6 +995,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.lineEdit_search_notes.textEdited.connect(lambda: search_element("notes"))
         self.ui.lineEdit_search_decree.textEdited.connect(lambda: search_element("decree"))
         self.ui.lineEdit_search_other.textEdited.connect(lambda: search_element("other"))
+        self.ui.pushButton_create_decree.clicked.connect(lambda: self.decree_creator_exec())
 
         self.ui.pushButton_update_timetable.clicked.connect(
             lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
@@ -988,6 +1013,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_subjects_roster.clicked.connect(lambda: self.subjects_win())
         self.ui.pushButton_students_roster.clicked.connect(lambda: self.students_win())
         self.ui.pushButton_enrollment_roster.clicked.connect(lambda: self.enrollment_win())
+        self.decree_ui.pushButton_decree_enrollment.clicked.connect(lambda: self.decree_enr_win())
         self.ui.pushButton_outlay.clicked.connect(lambda: self.outlay_win())
 
         self.head_ui.pushButton_headers_add.clicked.connect(lambda: headers_control_db('add'))
@@ -1046,8 +1072,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_ui.radio_col_4.clicked.connect(lambda: outlay_control_db())
         self.outlay_print_ui.pushButton_save_doc.clicked.connect(lambda: self.create_outlay())
 
-    # END BUTTONS
+        self.decree_enr_ui.pushButton_back.clicked.connect(lambda: decree_enr_back())
 
+    # END BUTTONS
     def clear_for_start(self):
         self.ui.widget_headers.hide()
         self.ui.widget_programs.hide()
@@ -1057,6 +1084,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_students.hide()
         self.ui.widget_enrollment.hide()
         self.ui.widget_outlay.hide()
+        self.decree_ui.widget_enrollment.hide()
 
     def load_list(self, _dir, parent_list, first_name):
         clear_list(parent_list.children())
@@ -1079,8 +1107,6 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 i.hide()
 
-
-
     def load_for_start(self):
         # Loading doc's for lists with doc's
         self.load_list(r'Приказы', self.ui.sAWContent_decree, 'decree_')
@@ -1099,7 +1125,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # create_list_el('Здесь objectName для кнопки',
     #                     'Здесь текст, который будет показан',
     #                     'Родительский элемент, с которым будет работа')
-    def create_list_el(self, name, text, ls):
+    def create_list_el(self, name, text, ls, auto_exclusive=True):
         a = QtWidgets.QCommandLinkButton(ls)
         font = QtGui.QFont()
         font.setFamily("Segoe UI")
@@ -1107,7 +1133,7 @@ class MainWindow(QtWidgets.QMainWindow):
         a.setFont(font)
         a.setCheckable(True)
         a.setChecked(False)
-        a.setAutoExclusive(True)
+        a.setAutoExclusive(auto_exclusive)
         a.setAutoDefault(False)
         a.setDefault(False)
         a.setObjectName(name)
@@ -1117,8 +1143,8 @@ class MainWindow(QtWidgets.QMainWindow):
         a.setText(self._translate("MainWindow", text))
         return a
 
-    def create_combo_box_el(self, ls, index, text):
-        ls.addItem(text, index)
+    def create_combo_box_el(self, ls, data, text):
+        ls.addItem(text, data)
         return ls
 
     def create_check_box_el(self, ls, name, text, checked=False):
@@ -1365,34 +1391,35 @@ class MainWindow(QtWidgets.QMainWindow):
             teachs = []
             for h in teachers[i]:
                 teachs.append(h)
-            teach_loader.append(str(teachs[0])[:])
-            teachs[0] = 'clb_teach_' + str(teachs[0])
-            teachs[1] = 'ФИО: ' + teachs[1] + '\n'
-            teachs[2] = 'Телефоны: ' + teachs[2] + '\n' if teachs[2] is not None and teachs[2] != '' else ''
-            teachs[3] = 'Электронные почты: ' + teachs[3] + '\n' if teachs[3] is not None and teachs[3] != '' else ''
-            teachs[4] = 'Социальные сети: ' + teachs[4] + '\n' if teachs[4] is not None and teachs[4] != '' else ''
-            teachs[5] = 'Должность: ' + teachs[5] + '\n' if teachs[5] is not None and teachs[5] != '' else ''
-            searcher = ''
-            if search_text is None or search_text == "":
-                _search_text = self.teach_ui.lineEdit_search_teachers.text().lower()
-            elif search_text is not None:
-                _search_text = search_text.lower()
-            else:
-                _search_text = search_text
-            for h in teachs:
-                if h is not None and h != '':
-                    searcher = searcher + h.lower()
-            if _search_text is not None and _search_text != '':
-                if _search_text in searcher:
+            if str(teachs[0]) != "1":
+                teach_loader.append(str(teachs[0])[:])
+                teachs[0] = 'clb_teach_' + str(teachs[0])
+                teachs[1] = 'ФИО: ' + teachs[1] + '\n'
+                teachs[2] = 'Телефоны: ' + teachs[2] + '\n' if teachs[2] is not None and teachs[2] != '' else ''
+                teachs[3] = 'Электронные почты: ' + teachs[3] + '\n' if teachs[3] is not None and teachs[3] != '' else ''
+                teachs[4] = 'Социальные сети: ' + teachs[4] + '\n' if teachs[4] is not None and teachs[4] != '' else ''
+                teachs[5] = 'Должность: ' + teachs[5] + '\n' if teachs[5] is not None and teachs[5] != '' else ''
+                searcher = ''
+                if search_text is None or search_text == "":
+                    _search_text = self.teach_ui.lineEdit_search_teachers.text().lower()
+                elif search_text is not None:
+                    _search_text = search_text.lower()
+                else:
+                    _search_text = search_text
+                for h in teachs:
+                    if h is not None and h != '':
+                        searcher = searcher + h.lower()
+                if _search_text is not None and _search_text != '':
+                    if _search_text in searcher:
+                        teach_but = self.create_list_el(teachs[0],
+                                                        teachs[1] + teachs[5] + teachs[2] + teachs[3] + teachs[4],
+                                                        self.teach_ui.sAWContent_teachers_list)
+                        teach_but.clicked.connect(lambda: loader_teachers_edits())
+                else:
                     teach_but = self.create_list_el(teachs[0],
                                                     teachs[1] + teachs[5] + teachs[2] + teachs[3] + teachs[4],
                                                     self.teach_ui.sAWContent_teachers_list)
                     teach_but.clicked.connect(lambda: loader_teachers_edits())
-            else:
-                teach_but = self.create_list_el(teachs[0],
-                                                teachs[1] + teachs[5] + teachs[2] + teachs[3] + teachs[4],
-                                                self.teach_ui.sAWContent_teachers_list)
-                teach_but.clicked.connect(lambda: loader_teachers_edits())
 
     # Loader database for groups
     def load_db_groups(self, search_text=None):
@@ -1522,8 +1549,11 @@ class MainWindow(QtWidgets.QMainWindow):
             subs[0] = 'clb_sub_' + str(subs[0])
             subs[1] = 'Название: ' + subs[1] + '\n' if subs[1] is not None and subs[1] != '' else ''
             subs[2] = 'Почасовая оплата: ' + subs[2] + '\n' if subs[2] is not None and subs[2] != '' else ''
-            subs[3] = 'Преподаватель: ' + sub_teach[0][0] + '\n' if sub_teach[0][0] is not None and sub_teach[0][
-                0] != '' else ''
+            try:
+                subs[3] = 'Преподаватель: ' + sub_teach[0][0] + '\n' if sub_teach[0][0] is not None and sub_teach[0][
+                    0] != '' else ''
+            except IndexError:
+                subs[3] = ""
             subs[4] = 'Стоимость: ' + subs[4] + '\n' if subs[4] is not None and subs[4] != '' else ''
             subs[5] = 'Программа: ' + sub_prog[0][0] + '\n' if sub_prog[0][0] is not None and sub_prog[0][
                 0] != '' else ''
@@ -1611,14 +1641,12 @@ class MainWindow(QtWidgets.QMainWindow):
         _sql = "SELECT * FROM students"
         students = _db.query(_sql)
         _db.close()
-        stud_loader = []
 
         _db = ARMDataBase()
         for i in range(len(students)):
             studs = []
             for h in students[i]:
                 studs.append(h)
-            stud_loader.append(str(studs[0])[:])
 
             if studs[2] is not None and studs[2] != '':
                 _sql = "SELECT group_name FROM groups WHERE id_group=" + str(studs[2])
@@ -1722,7 +1750,7 @@ class MainWindow(QtWidgets.QMainWindow):
             id_group_stud = _db1.query(_sql3)
             _sql3 = "SELECT id_prog FROM groups WHERE id_group=" + str(id_group_stud[0][0])
             id_prog_stud = _db1.query(_sql3)
-            _sql3 = "SELECT id_sub, sub_name FROM subjects WHERE id_prog=" + str(id_prog_stud[0][0])
+            _sql3 = "SELECT id_sub, sub_name, id_teacher FROM subjects WHERE id_prog=" + str(id_prog_stud[0][0])
             list_subs = _db1.query(_sql3)
             _list_active_subs = []
             self.enr_ui.list_cb_checked = []
@@ -1733,15 +1761,20 @@ class MainWindow(QtWidgets.QMainWindow):
                 _sql2 = "SELECT student_numcontract, student_datecontract, status FROM subs_in_studs WHERE id_sub=" + \
                         str(list_subs[sub][0]) + " AND id_student=" + selected_enrollment
                 contracts1 = _db1.query(_sql2)
+                try:
+                    _sql2 = "SELECT teacher_name FROM teachers WHERE id_teacher=" + str(list_subs[sub][2])
+                    teacher_fam = _db1.query(_sql2)[0][0].split(" ")[0]
+                except IndexError:
+                    teacher_fam = ""
                 cb = self.create_check_box_el(self.enr_ui.groupBox_stud_subs, 'el_' + str(list_subs[sub][0]),
-                                              list_subs[sub][1],
+                                              f"{list_subs[sub][1]} ({teacher_fam})",
                                               True if str(list_subs[sub][0]) in _list_active_subs else False)
                 self.enr_ui.list_cb_checked.append(
                     [str(list_subs[sub][0]), True if str(list_subs[sub][0]) in _list_active_subs else False])
                 cb.clicked.connect(lambda: check_box_clicked())
                 gb = self.create_sub_groupbox(self.enr_ui.groupBox_sis_contracts,
                                               "grB_" + str(list_subs[sub][0]),
-                                              list_subs[sub][1],
+                                              f"{list_subs[sub][1]} ({teacher_fam})",
                                               False if str(list_subs[sub][0]) in _list_active_subs else True)
                 for chield in gb.children():
                     if "gL_" not in chield.objectName() and contracts1 != []:
@@ -1756,15 +1789,10 @@ class MainWindow(QtWidgets.QMainWindow):
         _db = ARMDataBase()
         _sql = "SELECT * FROM students"
         students = _db.query(_sql)
-        _db.close()
-        stud_loader = []
-
-        _db = ARMDataBase()
         for i in range(len(students)):
             studs = []
             for h in students[i]:
                 studs.append(h)
-            stud_loader.append(str(studs[0])[:])
 
             if studs[2] is not None and studs[2] != '':
                 _sql = "SELECT group_name FROM groups WHERE id_group=" + str(studs[2])
@@ -1830,6 +1858,138 @@ class MainWindow(QtWidgets.QMainWindow):
                                                studs[1] + studs[2] + studs[3] + studs[4] + studs[5],
                                                self.enr_ui.sAWContent_enr_list)
                 stud_but.clicked.connect(lambda: loader_enr_edits())
+        _db.close()
+
+    # Loader database for enrollment in decree
+    def load_db_decree_enr(self):
+        def setup_prog_info():
+            _db = ARMDataBase()
+            selected_prog = self.decree_enr_ui.comboBox_prog.currentData()
+            if selected_prog is not None:
+                _sql = "SELECT id_group FROM groups WHERE id_prog=" + str(selected_prog)
+                try:
+                    groups = _db.query(_sql)[0][0]
+                except IndexError:
+                    groups = 1
+                self.decree_enr_ui.comboBox_group.setCurrentIndex(self.decree_enr_ui.comboBox_group.findData(groups))
+                _sql = "SELECT prog_range_dates FROM programs WHERE id_prog=" + \
+                       str(self.decree_enr_ui.comboBox_prog.currentData())
+                try:
+                    dates = _db.query(_sql)[0][0].split("|")
+                    self.decree_enr_ui.dateEdit_date_start.setDate(datetime.date(int(dates[0].split('.')[2]),
+                                                                                 int(dates[0].split('.')[1]),
+                                                                                 int(dates[0].split('.')[0])))
+                    self.decree_enr_ui.dateEdit_date_end.setDate(datetime.date(int(dates[1].split('.')[2]),
+                                                                               int(dates[1].split('.')[1]),
+                                                                               int(dates[1].split('.')[0])))
+                except AttributeError:
+                    pass
+            _db.close()
+
+        def setup_group_info():
+            clear_list(self.decree_enr_ui.sAWContent_outlay_studs.children())
+            selected_group = self.decree_enr_ui.comboBox_group.currentData()
+            _db = ARMDataBase()
+            if selected_group is not None:
+                _sql = "SELECT id_student, student_name FROM students WHERE id_group=" + str(selected_group)
+                students = _db.query(_sql)
+            else:
+                students = []
+            for i in range(len(students)):
+                studs = []
+                for h in students[i]:
+                    studs.append(h)
+                _sql = "SELECT id_sub FROM subs_in_studs WHERE id_student=" + str(studs[0])
+                stud_subs = _db.query(_sql)
+                subjects = ''
+                for s in range(len(stud_subs)):
+                    _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(stud_subs[s][0])
+                    _sql1 = "SELECT student_numcontract, student_datecontract, status FROM subs_in_studs WHERE id_sub=" + str(
+                        stud_subs[s][0]) + " AND id_student=" + str(studs[0])
+                    contracts = _db.query(_sql1)
+                    if s > 0:
+                        if contracts[0][2] == "1":
+                            subjects += ', ' + _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0],
+                                                                                         contracts[0][1])
+                    else:
+                        if contracts[0][2] == "1":
+                            subjects += _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0], contracts[0][1])
+                if subjects != "":
+                    studs[0] = 'clb_decree_enr_' + str(studs[0])
+                    studs[1] = 'ФИО: ' + studs[1] + '\n' if studs[1] is not None and studs[1] != '' else ''
+                    studs.append('Предметы: ' + subjects)
+                    stud_but = self.create_list_el(studs[0],
+                                                   studs[1] + studs[2],
+                                                   self.decree_enr_ui.sAWContent_outlay_studs,
+                                                   auto_exclusive=False)
+                    stud_but.clicked.connect(lambda: uncheck_clb())
+            _db.close()
+
+        def check_all_group():
+            for clb in self.decree_enr_ui.sAWContent_outlay_studs.children():
+                if clb.objectName().startswith("clb_"):
+                    clb.setChecked(True) if self.decree_enr_ui.checkBox_all_group.isChecked() else clb.setChecked(False)
+
+        def uncheck_clb():
+            self.decree_enr_ui.checkBox_all_group.setChecked(False)
+
+        self.decree_enr_ui.comboBox_head.clear()
+        self.decree_enr_ui.comboBox_prog.clear()
+        self.decree_enr_ui.comboBox_pfs.clear()
+        self.decree_enr_ui.comboBox_office.clear()
+        self.decree_enr_ui.comboBox_manager_cpui.clear()
+        self.decree_enr_ui.comboBox_group.clear()
+        clear_list(self.decree_enr_ui.sAWContent_outlay_studs.children())
+        _db = ARMDataBase()
+
+        self.decree_enr_ui.checkBox_all_group.clicked.connect(lambda: check_all_group())
+
+        # comboBox for Head load
+        _sql = "SELECT id_head, head_name, head_prof FROM headers"
+        headers = _db.query(_sql)
+        for head in headers:
+            self.create_combo_box_el(self.decree_enr_ui.comboBox_head, head[0], str(head[2]) + " | " + str(head[1]))
+            if "директор хти" in str(head[2]).lower():
+                self.decree_enr_ui.comboBox_head.setCurrentIndex(
+                    self.decree_enr_ui.comboBox_head.findData(head[0]))
+
+        # comboBox for Programs load
+        _sql = "SELECT id_prog, prog_name, prog_range_dates FROM programs"
+        programs = _db.query(_sql)
+        for prog in programs:
+            self.create_combo_box_el(self.decree_enr_ui.comboBox_prog, prog[0], str(prog[1]))
+        self.decree_enr_ui.comboBox_prog.currentIndexChanged.connect(lambda: setup_prog_info())
+
+        # comboBox for Groups load
+        _sql = "SELECT id_group, group_name FROM groups"
+        groups = _db.query(_sql)
+        for group in groups:
+            self.create_combo_box_el(self.decree_enr_ui.comboBox_group, group[0], str(group[1]))
+        self.decree_enr_ui.comboBox_group.currentIndexChanged.connect(lambda: setup_group_info())
+
+        # comboBox for PFS load
+        for head in headers:
+            self.create_combo_box_el(self.decree_enr_ui.comboBox_pfs, head[0], str(head[2]) + " | " + str(head[1]))
+            if "пфс" in str(head[2]).lower():
+                self.decree_enr_ui.comboBox_pfs.setCurrentIndex(
+                    self.decree_enr_ui.comboBox_pfs.findData(head[0]))
+
+        # comboBox for head of office load
+        for head in headers:
+            self.create_combo_box_el(self.decree_enr_ui.comboBox_office, head[0],
+                                     str(head[2]) + " | " + str(head[1]))
+            if "канцеляр" in str(head[2]).lower():
+                self.decree_enr_ui.comboBox_office.setCurrentIndex(
+                    self.decree_enr_ui.comboBox_office.findData(head[0]))
+
+        # comboBox for manager CPUI load
+        for head in headers:
+            self.create_combo_box_el(self.decree_enr_ui.comboBox_manager_cpui, head[0],
+                                     str(head[2]) + " | " + str(head[1]))
+            if "цпюи" in str(head[2]).lower():
+                self.decree_enr_ui.comboBox_manager_cpui.setCurrentIndex(
+                    self.decree_enr_ui.comboBox_manager_cpui.findData(head[0]))
+
         _db.close()
 
     # Loader database for Outlay Calculator
@@ -2166,6 +2326,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_db_outlay_printer()
         self.outlay_printer.exec_()
 
+    def decree_creator_exec(self):
+        self.load_db_decree_enr()
+        self.decree_ui.widget_enrollment.hide()
+        self.decree_ui.widget_main.show()
+        self.decree_creator.exec_()
+
     def select_list_el(self):
         if self.ttable_ui.sAWContent_hours_list.findChild(
                 QtWidgets.QCommandLinkButton, "clb_" +
@@ -2280,9 +2446,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if sel_sub:
             spin_studs.setValue(int(studs_col[0][0]))
-            spin_price.setValue(int(sub_info[0][2]))
-            spin_tax.setValue(int(sub_info[0][1]))
-            spin_hours.setValue(int(sub_info[0][3]))
+            try:
+                spin_price.setValue(int(sub_info[0][2]))
+            except ValueError:
+                spin_price.setValue(int(0))
+            try:
+                spin_tax.setValue(int(sub_info[0][1]))
+            except ValueError:
+                spin_tax.setValue(int(0))
+            try:
+                spin_hours.setValue(int(sub_info[0][3]))
+            except ValueError:
+                spin_hours.setValue(int(0))
 
         self.outlay_ui.gL_widget_calcs.addWidget(widget_calcbox, i, j)
         return widget_calcbox
@@ -3320,27 +3495,39 @@ def create_timetable_doc(_sub):
             if len(students) > 13:
                 par = doc.add_paragraph('_')
                 par.runs[0].add_break(docx.enum.text.WD_BREAK.PAGE)
-                par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
-                par1.runs[0].bold = True
-                par1.runs[0].font.name = "Times New Roman"
-                par1.runs[0].font.size = docx.shared.Pt(14)
+
+                par = doc.add_paragraph(group_name + " " + timetable[0][1])
+                par.runs[0].bold = True
+                par.runs[0].font.name = "Times New Roman"
+                par.runs[0].font.size = docx.shared.Pt(14)
             elif len(students) < 13 and j % 2 == 1:
                 par = doc.add_paragraph('_')
                 par.runs[0].add_break(docx.enum.text.WD_BREAK.PAGE)
-                par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
-                par1.runs[0].bold = True
-                par1.runs[0].font.name = "Times New Roman"
-                par1.runs[0].font.size = docx.shared.Pt(14)
+
+                par = doc.add_paragraph(group_name + " " + timetable[0][1])
+                par.runs[0].bold = True
+                par.runs[0].font.name = "Times New Roman"
+                par.runs[0].font.size = docx.shared.Pt(14)
+            elif len(students) < 13 and j % 2 == 0:
+                par = doc.add_paragraph('_')
+                par.runs[0].font.size = docx.shared.Pt(1)
+                par.paragraph_format.space_after = docx.shared.Pt(0)
+                par.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
             elif len(students) == 13 and j % 2 == 0:
                 par = doc.add_paragraph('_')
                 par.runs[0].font.size = docx.shared.Pt(1)
                 par.paragraph_format.space_after = docx.shared.Pt(0)
                 par.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
             elif len(students) == 13 and j % 2 == 1:
-                par1 = doc.add_paragraph(group_name + " " + timetable[0][1])
-                par1.runs[0].bold = True
-                par1.runs[0].font.name = "Times New Roman"
-                par1.runs[0].font.size = docx.shared.Pt(14)
+                par = doc.add_paragraph('_')
+                par.runs[0].font.size = docx.shared.Pt(1)
+                par.paragraph_format.space_after = docx.shared.Pt(0)
+                par.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+
+                par = doc.add_paragraph(group_name + " " + timetable[0][1])
+                par.runs[0].bold = True
+                par.runs[0].font.name = "Times New Roman"
+                par.runs[0].font.size = docx.shared.Pt(14)
         else:
             table_timetable = doc.add_table(rows=1 + len(students),
                                             cols=2 + len(parse_timetable) - (len_date * (tabs_c - 1)),
