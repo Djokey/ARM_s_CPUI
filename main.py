@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.table import _Cell
-from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE
 from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
 
 # My UI includes
@@ -1073,6 +1073,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_print_ui.pushButton_save_doc.clicked.connect(lambda: self.create_outlay())
 
         self.decree_enr_ui.pushButton_back.clicked.connect(lambda: decree_enr_back())
+        self.decree_enr_ui.pushButton_save_doc.clicked.connect(lambda: self.create_decree_enr())
 
     # END BUTTONS
     def clear_for_start(self):
@@ -2755,10 +2756,85 @@ class MainWindow(QtWidgets.QMainWindow):
         task.deamon = True
         task.start()
 
+    def create_decree_enr(self):
+        _db = ARMDataBase()
+        _sql = "SELECT prog_range FROM programs WHERE id_prog=" + str(self.decree_enr_ui.comboBox_prog.currentData())
+        try:
+            prog_range = str(_db.query(_sql)[0][0])
+        except IndexError:
+            prog_range = "8"
+        decree_enr_data = [{
+            "head": self.decree_enr_ui.comboBox_head.currentText(),
+            "program": self.decree_enr_ui.comboBox_prog.currentText(),
+            "prog_range": prog_range,
+            "group": self.decree_enr_ui.comboBox_group.currentText(),
+            "date_start": self.decree_enr_ui.dateEdit_date_start.date().toString('dd.MM.yyyy'),
+            "date_end": self.decree_enr_ui.dateEdit_date_end.date().toString('dd.MM.yyyy'),
+            "manager_cpui": self.decree_enr_ui.comboBox_manager_cpui.currentText(),
+            "office": self.decree_enr_ui.comboBox_office.currentText(),
+            "pfc": self.decree_enr_ui.comboBox_pfs.currentText()},
+        []]
+        for i in self.decree_enr_ui.sAWContent_outlay_studs.children():
+            if i.objectName().startswith("clb_") and i.isChecked():
+                _sql = "SELECT student_name FROM students WHERE id_student=" + i.objectName().split("_")[-1]
+                student_name = _db.query(_sql)[0][0]
+                _sql = "SELECT id_sub FROM subs_in_studs WHERE status='1' AND id_student=" + i.objectName().split("_")[-1]
+                subs_id = _db.query(_sql)
+                subs_list = ''
+                j = 0
+                for sub in range(len(subs_id)):
+                    _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(subs_id[sub][0])
+                    if sub == 0:
+                        subs_list += _db.query(_sql)[0][0].lower()
+                    elif sub > 0:
+                        subs_list += ', ' + _db.query(_sql)[0][0].lower()
+                decree_enr_data[1].append([student_name, subs_list])
+        _db.close()
+
+        path = os.getcwd() + r"/Документы/Приказы/"
+        filename = f"Приказ на зачисление {decree_enr_data[0]['program']}, " \
+                   f"{decree_enr_data[0]['date_start'][-2:]}-{decree_enr_data[0]['date_end'][-2:]}, " \
+                   f"{decree_enr_data[0]['group']} №000000.docx"
+        desk_list_dir = os.listdir(path)
+        indexes_list = []
+        for doc_in_dir in desk_list_dir:
+            start_index = doc_in_dir.find('№')
+            if start_index:
+                try:
+                    indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+                except Exception:
+                    pass
+        copy_index = 0
+        while copy_index in indexes_list:
+            copy_index += 1
+            str_copy_index = str(copy_index)
+            while len(str_copy_index) < 6:
+                str_copy_index = "0" + str_copy_index
+            filename = f"Приказ на зачисление {decree_enr_data[0]['program']}, " \
+                       f"{decree_enr_data[0]['date_start'][-2:]}-{decree_enr_data[0]['date_end'][-2:]}, " \
+                       f"{decree_enr_data[0]['group']} №{str_copy_index}.docx"
+
+        self.decree_creator.close()
+        set_doc_warning("Отправлено",
+                        'Документ будет сохранен в прочие документы.\n'
+                        'Вы сможете найти его во вкладке "Прочие"\n'
+                        'Имя документа:\n' +
+                        filename)
+
+        thread_list = []
+        task = threading.Thread(target=DecreeEnrollmentCreate(), args=(decree_enr_data,))
+        thread_list.append(task)
+        task.deamon = True
+        task.start()
 
 class OutlayCreate:
     def __call__(self, outlay_data):
         create_outlay_doc(outlay_data)
+
+
+class DecreeEnrollmentCreate:
+    def __call__(self, decree_enr_data):
+        create_decree_enrollment_doc(decree_enr_data)
 
 
 def create_outlay_doc(outlay_data):
@@ -2962,27 +3038,12 @@ def create_outlay_doc(outlay_data):
     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # TABLE OUTLAY
-    def create_cell(text, __cell, __rows, _width, _height, font_size=14, font_name="Times New Roman",
-                    text_alignment=WD_ALIGN_PARAGRAPH.CENTER, cell_alignment=WD_ALIGN_VERTICAL.CENTER,
-                    line_spacing=WD_LINE_SPACING.SINGLE, __space_after=0, underline=False, bold=False):
-        __cell.text = text
-        __cell.paragraphs[0].runs[0].font.name = font_name
-        __cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(font_size)
-        __cell.paragraphs[0].paragraph_format.line_spacing_rule = line_spacing
-        __cell.paragraphs[0].runs[0].font.underline = underline
-        __cell.paragraphs[0].runs[0].font.bold = bold
-        __cell.paragraphs[0].alignment = text_alignment
-        __cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(__space_after)
-        __cell.vertical_alignment = cell_alignment
-        __cell.width = docx.shared.Cm(_width)
-        __rows.height = docx.shared.Cm(_height)
-
     tab_outlay = doc.add_table(rows=7, cols=4, style='Table Grid')
 
-    create_cell("Код", tab_outlay.cell(0, 0), tab_outlay.rows[0], 1.69, 0.53)
-    create_cell("Наименование предметных статей", tab_outlay.cell(0, 1), tab_outlay.rows[0], 8.08, 0.53)
-    create_cell("Отношение к затратам, %", tab_outlay.cell(0, 2), tab_outlay.rows[0], 4.26, 0.53)
-    create_cell("Сумма, руб.", tab_outlay.cell(0, 3), tab_outlay.rows[0], 2.6, 0.53)
+    add_cell("Код", tab_outlay.cell(0, 0), tab_outlay.rows[0], 1.69, 0.53)
+    add_cell("Наименование предметных статей", tab_outlay.cell(0, 1), tab_outlay.rows[0], 8.08, 0.53)
+    add_cell("Отношение к затратам, %", tab_outlay.cell(0, 2), tab_outlay.rows[0], 4.26, 0.53)
+    add_cell("Сумма, руб.", tab_outlay.cell(0, 3), tab_outlay.rows[0], 2.6, 0.53)
 
     profit = 0.0
     cost = 0.0
@@ -2993,19 +3054,19 @@ def create_outlay_doc(outlay_data):
         zero = "0"
     else:
         zero = ""
-    create_cell(" ", tab_outlay.cell(1, 0), tab_outlay.rows[1], 1.69, 0.53)
-    create_cell("общий доход",
-                tab_outlay.cell(1, 1), tab_outlay.rows[1], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(" ", tab_outlay.cell(1, 2), tab_outlay.rows[1], 4.26, 0.53)
-    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(1, 3), tab_outlay.rows[1], 2.6, 0.53,
-                font_size=12)
+    add_cell(" ", tab_outlay.cell(1, 0), tab_outlay.rows[1], 1.69, 0.53)
+    add_cell("общий доход",
+             tab_outlay.cell(1, 1), tab_outlay.rows[1], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(" ", tab_outlay.cell(1, 2), tab_outlay.rows[1], 4.26, 0.53)
+    add_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(1, 3), tab_outlay.rows[1], 2.6, 0.53,
+             font_size=12)
 
-    create_cell(" ", tab_outlay.cell(2, 0), tab_outlay.rows[2], 1.69, 0.53)
-    create_cell("расходы, всего в том числе:",
-                tab_outlay.cell(2, 1), tab_outlay.rows[2], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell("100,00", tab_outlay.cell(2, 2), tab_outlay.rows[2], 4.26, 0.53, font_size=12)
-    create_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(2, 3), tab_outlay.rows[2], 2.6, 0.53,
-                font_size=12)
+    add_cell(" ", tab_outlay.cell(2, 0), tab_outlay.rows[2], 1.69, 0.53)
+    add_cell("расходы, всего в том числе:",
+             tab_outlay.cell(2, 1), tab_outlay.rows[2], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell("100,00", tab_outlay.cell(2, 2), tab_outlay.rows[2], 4.26, 0.53, font_size=12)
+    add_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(2, 3), tab_outlay.rows[2], 2.6, 0.53,
+             font_size=12)
 
     try:
         otfot = cost / profit * 100
@@ -3015,42 +3076,42 @@ def create_outlay_doc(outlay_data):
         zero = "0"
     else:
         zero = ""
-    create_cell(" ", tab_outlay.cell(3, 0), tab_outlay.rows[3], 1.69, 0.53)
-    create_cell("вознаграждение за образовательные услуги гражданско-правового характера и "
+    add_cell(" ", tab_outlay.cell(3, 0), tab_outlay.rows[3], 1.69, 0.53)
+    add_cell("вознаграждение за образовательные услуги гражданско-правового характера и "
                 "начисление страховых взносов во внебюджетные фонды",
-                tab_outlay.cell(3, 1), tab_outlay.rows[3], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(str(round(otfot, 2)).replace(".", ",") + zero,
-                tab_outlay.cell(3, 2), tab_outlay.rows[3], 4.26, 0.53, font_size=12)
+             tab_outlay.cell(3, 1), tab_outlay.rows[3], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(str(round(otfot, 2)).replace(".", ",") + zero,
+             tab_outlay.cell(3, 2), tab_outlay.rows[3], 4.26, 0.53, font_size=12)
     if len(str(round(cost, 2)).split(".")[-1]) < 2:
         zero = "0"
     else:
         zero = ""
-    create_cell(str(round(cost, 2)).replace(".", ",") + zero,
-                tab_outlay.cell(3, 3), tab_outlay.rows[3], 2.6, 0.53, font_size=12)
+    add_cell(str(round(cost, 2)).replace(".", ",") + zero,
+             tab_outlay.cell(3, 3), tab_outlay.rows[3], 2.6, 0.53, font_size=12)
 
     public_service = 0.05 * profit
     if len(str(round(public_service, 2)).split(".")[-1]) < 2:
         zero = "0"
     else:
         zero = ""
-    create_cell(" ", tab_outlay.cell(4, 0), tab_outlay.rows[4], 1.69, 0.53)
-    create_cell("коммунальные услуги",
-                tab_outlay.cell(4, 1), tab_outlay.rows[4], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell("5,00", tab_outlay.cell(4, 2), tab_outlay.rows[4], 4.26, 0.53, font_size=12)
-    create_cell(str(round(public_service, 2)).replace(".", ",") + zero,
-                tab_outlay.cell(4, 3), tab_outlay.rows[4], 2.6, 0.53, font_size=12)
+    add_cell(" ", tab_outlay.cell(4, 0), tab_outlay.rows[4], 1.69, 0.53)
+    add_cell("коммунальные услуги",
+             tab_outlay.cell(4, 1), tab_outlay.rows[4], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell("5,00", tab_outlay.cell(4, 2), tab_outlay.rows[4], 4.26, 0.53, font_size=12)
+    add_cell(str(round(public_service, 2)).replace(".", ",") + zero,
+             tab_outlay.cell(4, 3), tab_outlay.rows[4], 2.6, 0.53, font_size=12)
 
     inst_cost = 0.18 * profit
     if len(str(round(inst_cost, 2)).split(".")[-1]) < 2:
         zero = "0"
     else:
         zero = ""
-    create_cell(" ", tab_outlay.cell(5, 0), tab_outlay.rows[5], 1.69, 0.53)
-    create_cell("общеинститутские расходы",
-                tab_outlay.cell(5, 1), tab_outlay.rows[5], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell("18,00", tab_outlay.cell(5, 2), tab_outlay.rows[5], 4.26, 0.53, font_size=12)
-    create_cell(str(round(inst_cost, 2)).replace(".", ",") + zero,
-                tab_outlay.cell(5, 3), tab_outlay.rows[5], 2.6, 0.53, font_size=12)
+    add_cell(" ", tab_outlay.cell(5, 0), tab_outlay.rows[5], 1.69, 0.53)
+    add_cell("общеинститутские расходы",
+             tab_outlay.cell(5, 1), tab_outlay.rows[5], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell("18,00", tab_outlay.cell(5, 2), tab_outlay.rows[5], 4.26, 0.53, font_size=12)
+    add_cell(str(round(inst_cost, 2)).replace(".", ",") + zero,
+             tab_outlay.cell(5, 3), tab_outlay.rows[5], 2.6, 0.53, font_size=12)
 
     div_cost_ratio = 100.0 - otfot - 5.0 - 18.0
     div_cost = div_cost_ratio * profit / 100
@@ -3058,17 +3119,17 @@ def create_outlay_doc(outlay_data):
         zero = "0"
     else:
         zero = ""
-    create_cell(" ", tab_outlay.cell(6, 0), tab_outlay.rows[6], 1.69, 0.53)
-    create_cell("расходы подразделения",
-                tab_outlay.cell(6, 1), tab_outlay.rows[6], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(str(round(div_cost_ratio, 2)).replace(".", ",") + zero,
-                tab_outlay.cell(6, 2), tab_outlay.rows[6], 4.26, 0.53, font_size=12)
+    add_cell(" ", tab_outlay.cell(6, 0), tab_outlay.rows[6], 1.69, 0.53)
+    add_cell("расходы подразделения",
+             tab_outlay.cell(6, 1), tab_outlay.rows[6], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(str(round(div_cost_ratio, 2)).replace(".", ",") + zero,
+             tab_outlay.cell(6, 2), tab_outlay.rows[6], 4.26, 0.53, font_size=12)
     if len(str(round(div_cost, 2)).split(".")[-1]) < 2:
         zero = "0"
     else:
         zero = ""
-    create_cell(str(round(div_cost, 2)).replace(".", ",") + zero,
-                tab_outlay.cell(6, 3), tab_outlay.rows[6], 2.6, 0.53, font_size=12)
+    add_cell(str(round(div_cost, 2)).replace(".", ",") + zero,
+             tab_outlay.cell(6, 3), tab_outlay.rows[6], 2.6, 0.53, font_size=12)
 
     par = doc.add_paragraph(" ")
     par.runs[0].font.name = "Times New Roman"
@@ -3076,36 +3137,36 @@ def create_outlay_doc(outlay_data):
 
     tab_approve = doc.add_table(rows=6, cols=2)
 
-    create_cell("Зав. ЦПЮИ", tab_approve.cell(0, 0), tab_approve.rows[1], 11.94, 1.12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. "
+    add_cell("Зав. ЦПЮИ", tab_approve.cell(0, 0), tab_approve.rows[1], 11.94, 1.12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. "
                 f"{outlay_data[4]['manager_cpui'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['manager_cpui'].split(' ')[-3]}",
-                tab_approve.cell(0, 1), tab_approve.rows[0], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+             tab_approve.cell(0, 1), tab_approve.rows[0], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
-    create_cell(" ", tab_approve.cell(1, 0), tab_approve.rows[1], 11.94, 1.12)
-    create_cell(" ", tab_approve.cell(1, 1), tab_approve.rows[1], 4.94, 1.12)
+    add_cell(" ", tab_approve.cell(1, 0), tab_approve.rows[1], 11.94, 1.12)
+    add_cell(" ", tab_approve.cell(1, 1), tab_approve.rows[1], 4.94, 1.12)
 
-    create_cell("Согласовано:", tab_approve.cell(2, 0), tab_approve.rows[2], 11.94, 1.12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(" ", tab_approve.cell(2, 1), tab_approve.rows[2], 4.94, 1.12)
+    add_cell("Согласовано:", tab_approve.cell(2, 0), tab_approve.rows[2], 11.94, 1.12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(" ", tab_approve.cell(2, 1), tab_approve.rows[2], 4.94, 1.12)
 
-    create_cell("Гл. бухгалтер", tab_approve.cell(3, 0), tab_approve.rows[3], 11.94, 1.12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['bookkeeper'].split(' ')[-2][:1]}. "
+    add_cell("Гл. бухгалтер", tab_approve.cell(3, 0), tab_approve.rows[3], 11.94, 1.12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(f"{outlay_data[4]['bookkeeper'].split(' ')[-2][:1]}. "
                 f"{outlay_data[4]['bookkeeper'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['bookkeeper'].split(' ')[-3]}",
-                tab_approve.cell(3, 1), tab_approve.rows[3], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+             tab_approve.cell(3, 1), tab_approve.rows[3], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
-    create_cell(" ", tab_approve.cell(4, 0), tab_approve.rows[4], 11.94, 1.12)
-    create_cell(" ", tab_approve.cell(4, 1), tab_approve.rows[4], 4.94, 1.12)
+    add_cell(" ", tab_approve.cell(4, 0), tab_approve.rows[4], 11.94, 1.12)
+    add_cell(" ", tab_approve.cell(4, 1), tab_approve.rows[4], 4.94, 1.12)
 
-    create_cell("Зав. ПФС", tab_approve.cell(5, 0), tab_approve.rows[5], 11.94, 1.12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. "
+    add_cell("Зав. ПФС", tab_approve.cell(5, 0), tab_approve.rows[5], 11.94, 1.12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. "
                 f"{outlay_data[4]['pfc'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['pfc'].split(' ')[-3]}",
-                tab_approve.cell(5, 1), tab_approve.rows[5], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+             tab_approve.cell(5, 1), tab_approve.rows[5], 4.94, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
     # SECOND PAGE
     doc.add_section(docx.enum.section.WD_SECTION.NEW_PAGE)
@@ -3131,18 +3192,18 @@ def create_outlay_doc(outlay_data):
     plan_profit = doc.add_table(rows=2 + outlay_data[4]['count'], cols=4, style='Table Grid')
     plan_profit.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    create_cell(f"предмет",
-                plan_profit.cell(0, 0), plan_profit.rows[0], 4.25, 1.31, font_size=12)
-    create_cell(f"Стоимость, руб.",
-                plan_profit.cell(0, 1), plan_profit.rows[0], 4.25, 1.31, font_size=12)
-    create_cell(f" ",
-                plan_profit.cell(0, 2), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    add_cell(f"предмет",
+             plan_profit.cell(0, 0), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    add_cell(f"Стоимость, руб.",
+             plan_profit.cell(0, 1), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    add_cell(f" ",
+             plan_profit.cell(0, 2), plan_profit.rows[0], 4.25, 1.31, font_size=12)
     plan_profit.cell(0, 2).add_paragraph(f"Количество слушателей, чел.")
     plan_profit.cell(0, 2).paragraphs[-1].runs[0].font.name = "Times New Roman"
     plan_profit.cell(0, 2).paragraphs[-1].runs[0].font.size = docx.shared.Pt(12)
     plan_profit.cell(0, 2).paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    create_cell(f" ",
-                plan_profit.cell(0, 3), plan_profit.rows[0], 4.25, 1.31, font_size=12)
+    add_cell(f" ",
+             plan_profit.cell(0, 3), plan_profit.rows[0], 4.25, 1.31, font_size=12)
     plan_profit.cell(0, 3).add_paragraph(f"Планируемый доход, руб.")
     plan_profit.cell(0, 3).paragraphs[-1].runs[0].font.name = "Times New Roman"
     plan_profit.cell(0, 3).paragraphs[-1].runs[0].font.size = docx.shared.Pt(12)
@@ -3154,31 +3215,31 @@ def create_outlay_doc(outlay_data):
             zero = "0"
         else:
             zero = ""
-        create_cell(outlay_data[row_sub]['subject'],
-                    plan_profit.cell(row_sub + 1, 0), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
-        create_cell(str(outlay_data[row_sub]['price']),
-                    plan_profit.cell(row_sub + 1, 1), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
-        create_cell(str(outlay_data[row_sub]['studs']),
-                    plan_profit.cell(row_sub + 1, 2), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
-        create_cell(str(round(sub_profit, 2)).replace(".", ",") + zero,
-                    plan_profit.cell(row_sub + 1, 3), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+        add_cell(outlay_data[row_sub]['subject'],
+                 plan_profit.cell(row_sub + 1, 0), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+        add_cell(str(outlay_data[row_sub]['price']),
+                 plan_profit.cell(row_sub + 1, 1), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+        add_cell(str(outlay_data[row_sub]['studs']),
+                 plan_profit.cell(row_sub + 1, 2), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
+        add_cell(str(round(sub_profit, 2)).replace(".", ",") + zero,
+                 plan_profit.cell(row_sub + 1, 3), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
 
     if len(str(round(profit, 2)).split(".")[-1]) < 2:
         zero = "0"
     else:
         zero = ""
-    create_cell("Итого",
-                plan_profit.cell(outlay_data[4]['count'] + 1, 0), plan_profit.rows[outlay_data[4]['count'] + 1],
-                4.25, 0.45, font_size=12)
-    create_cell(" ",
-                plan_profit.cell(outlay_data[4]['count'] + 1, 1), plan_profit.rows[outlay_data[4]['count'] + 1],
-                4.25, 0.45, font_size=12)
-    create_cell(" ",
-                plan_profit.cell(outlay_data[4]['count'] + 1, 2), plan_profit.rows[outlay_data[4]['count'] + 1],
-                4.25, 0.45, font_size=12)
-    create_cell(str(round(profit, 2)).replace(".", ",") + zero,
-                plan_profit.cell(outlay_data[4]['count'] + 1, 3), plan_profit.rows[outlay_data[4]['count'] + 1],
-                4.25, 0.45, font_size=12, bold=True)
+    add_cell("Итого",
+             plan_profit.cell(outlay_data[4]['count'] + 1, 0), plan_profit.rows[outlay_data[4]['count'] + 1],
+             4.25, 0.45, font_size=12)
+    add_cell(" ",
+             plan_profit.cell(outlay_data[4]['count'] + 1, 1), plan_profit.rows[outlay_data[4]['count'] + 1],
+             4.25, 0.45, font_size=12)
+    add_cell(" ",
+             plan_profit.cell(outlay_data[4]['count'] + 1, 2), plan_profit.rows[outlay_data[4]['count'] + 1],
+             4.25, 0.45, font_size=12)
+    add_cell(str(round(profit, 2)).replace(".", ",") + zero,
+             plan_profit.cell(outlay_data[4]['count'] + 1, 3), plan_profit.rows[outlay_data[4]['count'] + 1],
+             4.25, 0.45, font_size=12, bold=True)
 
     # THIRD TABLE
     par = doc.add_paragraph(" ")
@@ -3194,27 +3255,27 @@ def create_outlay_doc(outlay_data):
     payment_for_hours = doc.add_table(rows=3 + outlay_data[4]['count'], cols=9, style='Table Grid')
     payment_for_hours.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    create_cell(" ", payment_for_hours.cell(0, 0), payment_for_hours.rows[0], 3.53, 0.93, font_size=12)
-    create_cell("ФИО", payment_for_hours.cell(0, 1), payment_for_hours.rows[0], 4.0, 0.93, font_size=12)
-    create_cell("ауд. занятия", payment_for_hours.cell(0, 2), payment_for_hours.rows[0], 2.25, 0.93, font_size=12)
-    create_cell("Всего час", payment_for_hours.cell(0, 3), payment_for_hours.rows[0], 1.75, 0.93, font_size=12)
-    create_cell("Стоимость 1 ч. руб.", payment_for_hours.cell(0, 4), payment_for_hours.rows[0], 3, 0.93, font_size=12)
-    create_cell("Сумма, руб.", payment_for_hours.cell(0, 5), payment_for_hours.rows[0], 2.75, 0.93, font_size=12)
-    create_cell("Начисления на оплату труда, %", payment_for_hours.cell(0, 6), payment_for_hours.rows[0],
-                3.5, 0.93, font_size=12)
-    create_cell("Сумма, руб.", payment_for_hours.cell(0, 7), payment_for_hours.rows[0], 2.5, 0.93, font_size=12)
-    create_cell("Всего, руб.", payment_for_hours.cell(0, 8), payment_for_hours.rows[0], 3, 0.93, font_size=12)
+    add_cell(" ", payment_for_hours.cell(0, 0), payment_for_hours.rows[0], 3.53, 0.93, font_size=12)
+    add_cell("ФИО", payment_for_hours.cell(0, 1), payment_for_hours.rows[0], 4.0, 0.93, font_size=12)
+    add_cell("ауд. занятия", payment_for_hours.cell(0, 2), payment_for_hours.rows[0], 2.25, 0.93, font_size=12)
+    add_cell("Всего час", payment_for_hours.cell(0, 3), payment_for_hours.rows[0], 1.75, 0.93, font_size=12)
+    add_cell("Стоимость 1 ч. руб.", payment_for_hours.cell(0, 4), payment_for_hours.rows[0], 3, 0.93, font_size=12)
+    add_cell("Сумма, руб.", payment_for_hours.cell(0, 5), payment_for_hours.rows[0], 2.75, 0.93, font_size=12)
+    add_cell("Начисления на оплату труда, %", payment_for_hours.cell(0, 6), payment_for_hours.rows[0],
+             3.5, 0.93, font_size=12)
+    add_cell("Сумма, руб.", payment_for_hours.cell(0, 7), payment_for_hours.rows[0], 2.5, 0.93, font_size=12)
+    add_cell("Всего, руб.", payment_for_hours.cell(0, 8), payment_for_hours.rows[0], 3, 0.93, font_size=12)
 
-    create_cell("ППС", payment_for_hours.cell(1, 0), payment_for_hours.rows[0], 3.53, 0.45, font_size=12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(" ", payment_for_hours.cell(1, 1), payment_for_hours.rows[0], 4.0, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(1, 2), payment_for_hours.rows[0], 2.25, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(1, 3), payment_for_hours.rows[0], 1.75, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(1, 4), payment_for_hours.rows[0], 3, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(1, 5), payment_for_hours.rows[0], 2.75, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(1, 6), payment_for_hours.rows[0], 3.5, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(1, 7), payment_for_hours.rows[0], 2.5, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(1, 8), payment_for_hours.rows[0], 3, 0.45, font_size=12)
+    add_cell("ППС", payment_for_hours.cell(1, 0), payment_for_hours.rows[0], 3.53, 0.45, font_size=12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(" ", payment_for_hours.cell(1, 1), payment_for_hours.rows[0], 4.0, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(1, 2), payment_for_hours.rows[0], 2.25, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(1, 3), payment_for_hours.rows[0], 1.75, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(1, 4), payment_for_hours.rows[0], 3, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(1, 5), payment_for_hours.rows[0], 2.75, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(1, 6), payment_for_hours.rows[0], 3.5, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(1, 7), payment_for_hours.rows[0], 2.5, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(1, 8), payment_for_hours.rows[0], 3, 0.45, font_size=12)
 
     for row_sub in range(outlay_data[4]['count']):
         try:
@@ -3230,43 +3291,43 @@ def create_outlay_doc(outlay_data):
             zero = "0"
         else:
             zero = ""
-        create_cell("Преподаватель", payment_for_hours.cell(row_sub + 2, 0), payment_for_hours.rows[row_sub + 2],
-                    3.53, 0.45, font_size=12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-        create_cell(teacher, payment_for_hours.cell(row_sub + 2, 1), payment_for_hours.rows[row_sub + 2],
-                    4.0, 0.45, font_size=12)
-        create_cell(str(hours), payment_for_hours.cell(row_sub + 2, 2), payment_for_hours.rows[row_sub + 2],
-                    2.25, 0.45, font_size=12)
-        create_cell(str(hours), payment_for_hours.cell(row_sub + 2, 3), payment_for_hours.rows[row_sub + 2],
-                    1.75, 0.45, font_size=12)
-        create_cell(str(tax), payment_for_hours.cell(row_sub + 2, 4), payment_for_hours.rows[row_sub + 2],
-                    3, 0.45, font_size=12)
-        create_cell(str(round(price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 5),
-                    payment_for_hours.rows[row_sub + 2], 2.75, 0.45, font_size=12)
-        create_cell("30,2", payment_for_hours.cell(row_sub + 2, 6), payment_for_hours.rows[row_sub + 2],
-                    3.5, 0.45, font_size=12)
+        add_cell("Преподаватель", payment_for_hours.cell(row_sub + 2, 0), payment_for_hours.rows[row_sub + 2],
+                 3.53, 0.45, font_size=12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+        add_cell(teacher, payment_for_hours.cell(row_sub + 2, 1), payment_for_hours.rows[row_sub + 2],
+                 4.0, 0.45, font_size=12)
+        add_cell(str(hours), payment_for_hours.cell(row_sub + 2, 2), payment_for_hours.rows[row_sub + 2],
+                 2.25, 0.45, font_size=12)
+        add_cell(str(hours), payment_for_hours.cell(row_sub + 2, 3), payment_for_hours.rows[row_sub + 2],
+                 1.75, 0.45, font_size=12)
+        add_cell(str(tax), payment_for_hours.cell(row_sub + 2, 4), payment_for_hours.rows[row_sub + 2],
+                 3, 0.45, font_size=12)
+        add_cell(str(round(price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 5),
+                 payment_for_hours.rows[row_sub + 2], 2.75, 0.45, font_size=12)
+        add_cell("30,2", payment_for_hours.cell(row_sub + 2, 6), payment_for_hours.rows[row_sub + 2],
+                 3.5, 0.45, font_size=12)
         price_ofot = float(price_before_ofot * 0.302)
         if len(str(round(price_ofot, 2)).split(".")[-1]) < 2:
             zero = "0"
         else:
             zero = ""
-        create_cell(str(round(price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 7),
-                    payment_for_hours.rows[row_sub + 2], 2.5, 0.45, font_size=12)
+        add_cell(str(round(price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 7),
+                 payment_for_hours.rows[row_sub + 2], 2.5, 0.45, font_size=12)
         price_after_ofot = float(price_ofot + price_before_ofot)
         if len(str(round(price_after_ofot, 2)).split(".")[-1]) < 2:
             zero = "0"
         else:
             zero = ""
-        create_cell(str(round(price_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 8),
-                    payment_for_hours.rows[row_sub + 2], 3, 0.45, font_size=12)
+        add_cell(str(round(price_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 8),
+                 payment_for_hours.rows[row_sub + 2], 3, 0.45, font_size=12)
 
     last_row = outlay_data[4]['count'] + 2
-    create_cell(" ", payment_for_hours.cell(last_row, 0),
-                payment_for_hours.rows[last_row], 3.53, 0.45, font_size=12)
-    create_cell("Всего ППС", payment_for_hours.cell(last_row, 1), payment_for_hours.rows[last_row], 4.0, 0.45,
-                font_size=12, bold=True)
-    create_cell(" ", payment_for_hours.cell(last_row, 2), payment_for_hours.rows[last_row], 2.25, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(last_row, 3), payment_for_hours.rows[last_row], 1.75, 0.45, font_size=12)
-    create_cell(" ", payment_for_hours.cell(last_row, 4), payment_for_hours.rows[last_row], 3, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(last_row, 0),
+             payment_for_hours.rows[last_row], 3.53, 0.45, font_size=12)
+    add_cell("Всего ППС", payment_for_hours.cell(last_row, 1), payment_for_hours.rows[last_row], 4.0, 0.45,
+             font_size=12, bold=True)
+    add_cell(" ", payment_for_hours.cell(last_row, 2), payment_for_hours.rows[last_row], 2.25, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(last_row, 3), payment_for_hours.rows[last_row], 1.75, 0.45, font_size=12)
+    add_cell(" ", payment_for_hours.cell(last_row, 4), payment_for_hours.rows[last_row], 3, 0.45, font_size=12)
     sum_price_before_ofot = 0.0
     for i in range(outlay_data[4]['count']):
         sum_price_before_ofot += float(outlay_data[i]['hours'] * outlay_data[i]['tax'])
@@ -3274,23 +3335,23 @@ def create_outlay_doc(outlay_data):
         zero = "0"
     else:
         zero = ""
-    create_cell(str(round(sum_price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 5),
-                payment_for_hours.rows[last_row], 2.75, 0.45, font_size=12, bold=True)
-    create_cell(" ", payment_for_hours.cell(last_row, 6), payment_for_hours.rows[last_row], 3.5, 0.45, font_size=12)
+    add_cell(str(round(sum_price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 5),
+             payment_for_hours.rows[last_row], 2.75, 0.45, font_size=12, bold=True)
+    add_cell(" ", payment_for_hours.cell(last_row, 6), payment_for_hours.rows[last_row], 3.5, 0.45, font_size=12)
     sum_price_ofot = float(sum_price_before_ofot * 0.302)
     if len(str(round(sum_price_ofot, 2)).split(".")[-1]) < 2:
         zero = "0"
     else:
         zero = ""
-    create_cell(str(round(sum_price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 7),
-                payment_for_hours.rows[last_row], 2.5, 0.45, font_size=12, bold=True)
+    add_cell(str(round(sum_price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 7),
+             payment_for_hours.rows[last_row], 2.5, 0.45, font_size=12, bold=True)
     sum_after_ofot = float(sum_price_ofot + sum_price_before_ofot)
     if len(str(round(sum_after_ofot, 2)).split(".")[-1]) < 2:
         zero = "0"
     else:
         zero = ""
-    create_cell(str(round(sum_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 8),
-                payment_for_hours.rows[last_row], 3, 0.45, font_size=12, bold=True)
+    add_cell(str(round(sum_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 8),
+             payment_for_hours.rows[last_row], 3, 0.45, font_size=12, bold=True)
 
     # SECOND HEADERS
     par = doc.add_paragraph(" ")
@@ -3299,23 +3360,287 @@ def create_outlay_doc(outlay_data):
 
     tab_approve = doc.add_table(rows=3, cols=2)
 
-    create_cell("Зав. ЦПЮИ", tab_approve.cell(0, 0), tab_approve.rows[1], 11, 1.12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. "
+    add_cell("Зав. ЦПЮИ", tab_approve.cell(0, 0), tab_approve.rows[1], 11, 1.12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(f"{outlay_data[4]['manager_cpui'].split(' ')[-2][:1]}. "
                 f"{outlay_data[4]['manager_cpui'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['manager_cpui'].split(' ')[-3]}",
-                tab_approve.cell(0, 1), tab_approve.rows[0], 6, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+             tab_approve.cell(0, 1), tab_approve.rows[0], 6, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
-    create_cell("Согласовано:", tab_approve.cell(1, 0), tab_approve.rows[1], 11, 1.12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(" ", tab_approve.cell(1, 1), tab_approve.rows[1], 6, 1.12)
+    add_cell("Согласовано:", tab_approve.cell(1, 0), tab_approve.rows[1], 11, 1.12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(" ", tab_approve.cell(1, 1), tab_approve.rows[1], 6, 1.12)
 
-    create_cell("Зав. ПФС", tab_approve.cell(2, 0), tab_approve.rows[2], 11, 1.12,
-                text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    create_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. "
+    add_cell("Зав. ПФС", tab_approve.cell(2, 0), tab_approve.rows[2], 11, 1.12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(f"{outlay_data[4]['pfc'].split(' ')[-2][:1]}. "
                 f"{outlay_data[4]['pfc'].split(' ')[-1][:1]}. "
                 f"{outlay_data[4]['pfc'].split(' ')[-3]}",
-                tab_approve.cell(2, 1), tab_approve.rows[2], 6, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+             tab_approve.cell(2, 1), tab_approve.rows[2], 6, 1.12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+
+    # SETTINGS FOR DOCX
+    properties = doc.core_properties
+    properties.author = "ЦПЮИ ХТИ"
+    # DOCX SAVE
+    doc.save(path + filename)
+    return path, filename
+
+
+def add_cell(text, __cell, __rows, _width, _height, height_rule=WD_ROW_HEIGHT_RULE.AT_LEAST, font_size=14,
+             font_name="Times New Roman",
+             text_alignment=WD_ALIGN_PARAGRAPH.CENTER, cell_alignment=WD_ALIGN_VERTICAL.CENTER,
+             line_spacing=WD_LINE_SPACING.SINGLE, __space_after=0, underline=False, bold=False, first_line_indent=0):
+    __cell.text = text
+    __cell.paragraphs[0].runs[0].font.name = font_name
+    __cell.paragraphs[0].runs[0].font.size = docx.shared.Pt(font_size)
+    __cell.paragraphs[0].paragraph_format.line_spacing_rule = line_spacing
+    __cell.paragraphs[0].runs[0].font.underline = underline
+    __cell.paragraphs[0].runs[0].font.bold = bold
+    __cell.paragraphs[0].alignment = text_alignment
+    __cell.paragraphs[0].paragraph_format.space_after = docx.shared.Pt(__space_after)
+    __cell.paragraphs[0].paragraph_format.first_line_indent = docx.shared.Cm(first_line_indent)
+    __cell.vertical_alignment = cell_alignment
+    __cell.width = docx.shared.Cm(_width)
+    __rows.height_rule = height_rule
+    __rows.height = docx.shared.Cm(_height)
+
+
+def add_par(document, text, font_name="Times New Roman", font_size=12, space_after=0,
+            line_spacing_rule=WD_LINE_SPACING.SINGLE, text_aligment=WD_ALIGN_PARAGRAPH.CENTER,
+            underline=False, bold=False, italic=False, first_line_indent=0):
+    par = document.add_paragraph(text)
+    par.runs[0].font.name = font_name
+    par.runs[0].font.size = docx.shared.Pt(font_size)
+    par.paragraph_format.space_after = docx.shared.Pt(space_after)
+    par.paragraph_format.line_spacing = 1.15
+    par.paragraph_format.line_spacing_rule = line_spacing_rule
+    par.paragraph_format.first_line_indent = docx.shared.Cm(first_line_indent)
+    par.alignment = text_aligment
+    par.runs[0].font.underline = underline
+    par.runs[0].font.bold = bold
+    par.runs[0].font.italic = italic
+
+
+def create_decree_enrollment_doc(decree_enr_data):
+    path = os.getcwd() + r"/Документы/Приказы/"
+    filename = f"Приказ на зачисление {decree_enr_data[0]['program']}, " \
+               f"{decree_enr_data[0]['date_start'][-2:]}-{decree_enr_data[0]['date_end'][-2:]}, " \
+               f"{decree_enr_data[0]['group']} №000000.docx"
+    desk_list_dir = os.listdir(path)
+    indexes_list = []
+    for doc_in_dir in desk_list_dir:
+        start_index = doc_in_dir.find('№')
+        if start_index:
+            try:
+                indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+            except Exception:
+                pass
+    copy_index = 0
+    while copy_index in indexes_list:
+        copy_index += 1
+        str_copy_index = str(copy_index)
+        while len(str_copy_index) < 6:
+            str_copy_index = "0" + str_copy_index
+        filename = f"Приказ на зачисление {decree_enr_data[0]['program']}, " \
+                   f"{decree_enr_data[0]['date_start'][-2:]}-{decree_enr_data[0]['date_end'][-2:]}, " \
+                   f"{decree_enr_data[0]['group']} №{str_copy_index}.docx"
+
+    doc = docx.Document()
+
+    # START DOC / FIRST PAGE
+
+    doc.sections[0].page_height = docx.shared.Cm(29.7)
+    doc.sections[0].page_width = docx.shared.Cm(21)
+    doc.sections[0].top_margin = docx.shared.Cm(1.5)
+    doc.sections[0].right_margin = docx.shared.Cm(1.5)
+    doc.sections[0].left_margin = docx.shared.Cm(3)
+    doc.sections[0].bottom_margin = docx.shared.Cm(1.25)
+
+    # HEADER
+    add_par(doc, "Министерство науки и высшего образования РФ", line_spacing_rule=WD_LINE_SPACING.MULTIPLE, italic=True)
+    add_par(doc, "Федеральное государственное автономное образовательное учреждение",
+            line_spacing_rule=WD_LINE_SPACING.MULTIPLE, italic=True)
+    add_par(doc, "высшего образования", line_spacing_rule=WD_LINE_SPACING.MULTIPLE, italic=True)
+    add_par(doc, "«СИБИРСКИЙ ФЕДЕРАЛЬНЫЙ УНИВЕРСИТЕТ»",
+            line_spacing_rule=WD_LINE_SPACING.MULTIPLE, bold=True, italic=True)
+    add_par(doc, "ХАКАССКИЙ ТЕХНИЧЕСКИЙ ИНСТИТУТ –", line_spacing_rule=WD_LINE_SPACING.MULTIPLE, bold=True, italic=True)
+    add_par(doc, "филиал ФГАОУ ВО «Сибирский федеральный университет»",
+            line_spacing_rule=WD_LINE_SPACING.MULTIPLE, italic=True)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, italic=True)
+    add_par(doc, "ПРИКАЗ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, italic=True, bold=True)
+
+    tab_num_decree = doc.add_table(rows=1, cols=3)
+    tab_num_decree.alignment = WD_TABLE_ALIGNMENT.RIGHT
+    add_cell(" ", tab_num_decree.cell(0, 0), tab_num_decree.rows[0], 3.47, 0.45, font_size=12)
+    set_cell_border(
+        tab_num_decree.cell(0, 0),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+    add_cell("№", tab_num_decree.cell(0, 1), tab_num_decree.rows[0], 0.79, 0.45, font_size=12)
+    add_cell(" ", tab_num_decree.cell(0, 2), tab_num_decree.rows[0], 2.19, 0.45, font_size=12, height_rule=WD_ROW_HEIGHT_RULE.EXACTLY)
+    set_cell_border(
+        tab_num_decree.cell(0, 2),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+
+    add_par(doc, " ")
+    add_par(doc, "По основной", text_aligment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_par(doc, "деятельности", text_aligment=WD_ALIGN_PARAGRAPH.LEFT, underline=True)
+    new_run = doc.paragraphs[-1].add_run("                                               г. Абакан")
+    new_run.font.name = "Times New Roman"
+    new_run.font.size = docx.shared.Pt(12)
+    add_par(doc, " ")
+    add_par(doc, "«О контингенте обучающихся по дополнительной образовательной программе в ЦПЮИ»",
+            first_line_indent=3.5, text_aligment=WD_ALIGN_PARAGRAPH.JUSTIFY)
+    add_par(doc, " ")
+    add_par(doc, "ПРИКАЗЫВАЮ:", text_aligment=WD_ALIGN_PARAGRAPH.JUSTIFY)
+    add_par(doc, " ")
+    add_par(
+        doc,
+        "1. Зачислить в ЦПЮИ с {0} по {1} года на {2}-х месячную дополнительную образовательную программу «{3}» "
+        "(группа {4}) следующих обучающихся, оплативших дополнительные услуги и заключивших "
+        "соответствующий договор:".format(
+            decree_enr_data[0]['date_start'],
+            decree_enr_data[0]['date_end'],
+            decree_enr_data[0]['prog_range'],
+            decree_enr_data[0]['program'],
+            decree_enr_data[0]['group']
+        ),
+        text_aligment=WD_ALIGN_PARAGRAPH.JUSTIFY,
+        first_line_indent=1.25)
+    add_par(doc, " ")
+    add_par(doc, " ")
+    add_par(doc, " ", font_size=9)
+    studs = []
+    for i in range(len(decree_enr_data[1])):
+        studs.append(decree_enr_data[1][i])
+    try:
+        studs.sort(key=lambda x: x[0])
+    except IndexError:
+        pass
+    for i in range(len(studs)):
+        try:
+            add_par(
+                doc,
+                f"{str(i+1)}. {studs[i][0]} ({studs[i][1]});",
+                first_line_indent=3.5,
+                text_aligment=WD_ALIGN_PARAGRAPH.LEFT
+            )
+        except IndexError:
+            pass
+    doc.paragraphs[-1].runs[0].text = doc.paragraphs[-1].runs[0].text.replace(";", ".")
+    add_par(doc, " ")
+    add_par(doc, " ")
+    add_par(
+        doc,
+        f"2. Зав. канцелярией {decree_enr_data[0]['office'].split(' ')[-3]} "
+        f"{decree_enr_data[0]['office'].split(' ')[-2][:1]}. "
+        f"{decree_enr_data[0]['office'].split(' ')[-1][:1]}. ознакомить с приказом всех поименованных в нем лиц.",
+        text_aligment=WD_ALIGN_PARAGRAPH.JUSTIFY, first_line_indent=1.25
+    )
+    add_par(doc, " ")
+    add_par(
+        doc,
+        f"3. Контроль за исполнением приказа возложить на зав. ЦПЮИ "
+        f"{decree_enr_data[0]['manager_cpui'].split(' ')[-3]} "
+        f"{decree_enr_data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+        f"{decree_enr_data[0]['manager_cpui'].split(' ')[-1][:1]}.",
+        text_aligment=WD_ALIGN_PARAGRAPH.JUSTIFY, first_line_indent=1.25
+    )
+    add_par(doc, " ")
+    add_par(doc, " ")
+    add_par(doc, " ")
+    add_par(doc, " ")
+    tab_head = doc.add_table(rows=1, cols=2)
+    tab_head.alignment = WD_TABLE_ALIGNMENT.CENTER
+    add_cell("   Директор", tab_head.cell(0, 0), tab_head.rows[0], 6, 0.4, font_size=12,
+             text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_cell(
+        f"{decree_enr_data[0]['head'].split(' ')[-2][:1]}. "
+        f"{decree_enr_data[0]['head'].split(' ')[-1][:1]}. "
+        f"{decree_enr_data[0]['head'].split(' ')[-3]}",
+        tab_head.cell(0, 1), tab_head.rows[0], 6.8, 0.4, font_size=12, text_alignment=WD_ALIGN_PARAGRAPH.RIGHT
+    )
+
+    # SECOND PAGE
+    doc.add_section(docx.enum.section.WD_SECTION.NEW_PAGE)
+    doc.sections[-1].page_height = docx.shared.Cm(29.7)
+    doc.sections[-1].page_width = docx.shared.Cm(21)
+    doc.sections[-1].top_margin = docx.shared.Cm(1.5)
+    doc.sections[-1].right_margin = docx.shared.Cm(1.5)
+    doc.sections[-1].left_margin = docx.shared.Cm(3)
+    doc.sections[-1].bottom_margin = docx.shared.Cm(1.25)
+    add_par(doc, "ЛИСТ СОГЛАСОВАНИЯ", font_size=14, bold=True)
+    add_par(doc, " ", font_size=14)
+    add_par(doc, "приказ № _______ от _______ 20____ г.", font_size=14)
+    add_par(doc, " ", font_size=14)
+
+    tab_pfc = doc.add_table(rows=2, cols=5)
+    tab_pfc.alignment = WD_TABLE_ALIGNMENT.CENTER
+    add_cell(f"зав. ПФС", tab_pfc.cell(0, 0), tab_pfc.rows[0], 3.76, 0.46, first_line_indent=-0.5)
+    add_cell(f" ", tab_pfc.cell(0, 1), tab_pfc.rows[0], 1, 0.46)
+    add_cell(f" ", tab_pfc.cell(0, 2), tab_pfc.rows[0], 4, 0.46)
+    add_cell(f" ", tab_pfc.cell(0, 3), tab_pfc.rows[0], 0.75, 0.46)
+    add_cell(f"{decree_enr_data[0]['pfc'].split(' ')[-2][:1]}. "
+             f"{decree_enr_data[0]['pfc'].split(' ')[-1][:1]}. "
+             f"{decree_enr_data[0]['pfc'].split(' ')[-3]}", tab_pfc.cell(0, 4), tab_pfc.rows[0], 5, 0.46)
+    add_cell(f"должность лица, согласующего", tab_pfc.cell(1, 0), tab_pfc.rows[1], 3.76, 0.46,
+             first_line_indent=-0.2, font_size=9, cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    add_cell(f"       приказ", tab_pfc.cell(1, 1), tab_pfc.rows[1], 1, 0.46, font_size=9,
+             first_line_indent=-0.2, text_alignment=WD_ALIGN_PARAGRAPH.LEFT, cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    tab_pfc.cell(1, 0).merge(tab_pfc.cell(1, 1))
+    add_cell(f"личная подпись", tab_pfc.cell(1, 2), tab_pfc.rows[1], 4, 0.46, font_size=9,
+             cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    add_cell(f" ", tab_pfc.cell(1, 3), tab_pfc.rows[1], 0.75, 0.46)
+    add_cell(f"инициалы, фамилия", tab_pfc.cell(1, 4), tab_pfc.rows[1], 5, 0.46, font_size=9,
+             cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    set_cell_border(
+        tab_pfc.cell(0, 0),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+    set_cell_border(
+        tab_pfc.cell(0, 2),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+    set_cell_border(
+        tab_pfc.cell(0, 4),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+
+    add_par(doc, " ", font_size=10)
+
+    tab_cpui = doc.add_table(rows=2, cols=5)
+    tab_cpui.alignment = WD_TABLE_ALIGNMENT.CENTER
+    add_cell(f"зав. ЦПЮИ", tab_cpui.cell(0, 0), tab_cpui.rows[0], 3.76, 0.46)
+    add_cell(f" ", tab_cpui.cell(0, 1), tab_cpui.rows[0], 1, 0.46)
+    add_cell(f" ", tab_cpui.cell(0, 2), tab_cpui.rows[0], 4, 0.46)
+    add_cell(f" ", tab_cpui.cell(0, 3), tab_cpui.rows[0], 0.75, 0.46)
+    add_cell(f"{decree_enr_data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+             f"{decree_enr_data[0]['manager_cpui'].split(' ')[-1][:1]}. "
+             f"{decree_enr_data[0]['manager_cpui'].split(' ')[-3]}", tab_cpui.cell(0, 4), tab_cpui.rows[0], 5, 0.46)
+    add_cell(f"должность лица, согласующего", tab_cpui.cell(1, 0), tab_cpui.rows[1], 3.76, 0.46,
+             first_line_indent=-0.2, font_size=9, cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    add_cell(f"       приказ", tab_cpui.cell(1, 1), tab_cpui.rows[1], 1, 0.46, font_size=9,
+             first_line_indent=-0.2, text_alignment=WD_ALIGN_PARAGRAPH.LEFT, cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    tab_cpui.cell(1, 0).merge(tab_cpui.cell(1, 1))
+    add_cell(f"личная подпись", tab_cpui.cell(1, 2), tab_cpui.rows[1], 4, 0.46, font_size=9,
+             cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    add_cell(f" ", tab_cpui.cell(1, 3), tab_cpui.rows[1], 0.75, 0.46)
+    add_cell(f"инициалы, фамилия", tab_cpui.cell(1, 4), tab_cpui.rows[1], 5, 0.46, font_size=9,
+             cell_alignment=WD_ALIGN_VERTICAL.TOP)
+    set_cell_border(
+        tab_cpui.cell(0, 0),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+    set_cell_border(
+        tab_cpui.cell(0, 2),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+    set_cell_border(
+        tab_cpui.cell(0, 4),
+        bottom={"sz": 10, "val": "single", "color": "#000000"}
+    )
+
 
     # SETTINGS FOR DOCX
     properties = doc.core_properties
