@@ -143,7 +143,7 @@ class Ui_Teachers(object):
         _translate = QtCore.QCoreApplication.translate
         Teachers.setWindowTitle(_translate("Teachers", "Form"))
         self.pushButton_teachers_add.setText(_translate("Teachers", "Добавить новую запись"))
-        self.pushButton_teachers_save.setText(_translate("Teachers", "Сохранить в выбранную запись"))
+        self.pushButton_teachers_save.setText(_translate("Teachers", "Сохранить выбранную запись"))
         self.label_teachers_fullname.setText(_translate("Teachers", "Фамилия Имя Отчество"))
         self.label_teachers_prof.setText(_translate("Teachers", "Должность"))
         self.label_teachers_phone.setText(_translate("Teachers", "Телефон (не обязательно)"))

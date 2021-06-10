@@ -105,7 +105,7 @@ class Ui_Groups(object):
         _translate = QtCore.QCoreApplication.translate
         Groups.setWindowTitle(_translate("Groups", "Группы обучающихся"))
         self.pushButton_groups_add.setText(_translate("Groups", "Добавить новую запись"))
-        self.pushButton_groups_save.setText(_translate("Groups", "Сохранить в выбранную запись"))
+        self.pushButton_groups_save.setText(_translate("Groups", "Сохранить выбранную запись"))
         self.label_groups_name.setText(_translate("Groups", "Наименование группы"))
         self.label_groups_prog.setText(_translate("Groups", "Образовательная программа группы"))
         self.label_groups_class.setText(_translate("Groups", "Уровень образования группы (не обязательно)\n"

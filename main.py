@@ -336,7 +336,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
-                                    '"Сохранить в выбранную запись"')
+                                    '"Сохранить выбранную запись"')
                 else:
                     _db = ARMDataBase()
                     _sql = "UPDATE headers SET " \
@@ -412,7 +412,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
-                                    '"Сохранить в выбранную запись"')
+                                    '"Сохранить выбранную запись"')
                 else:
                     _db = ARMDataBase()
                     _sql = "UPDATE programs SET " \
@@ -500,7 +500,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
-                                    '"Сохранить в выбранную запись"')
+                                    '"Сохранить выбранную запись"')
                 else:
                     _db = ARMDataBase()
                     _sql = "UPDATE teachers SET " \
@@ -578,7 +578,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
-                                    '"Сохранить в выбранную запись"')
+                                    '"Сохранить выбранную запись"')
                 else:
                     _db = ARMDataBase()
                     _sql = "SELECT id_prog FROM groups WHERE id_group=" + groups_selected
@@ -661,7 +661,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
-                                    '"Сохранить в выбранную запись"')
+                                    '"Сохранить выбранную запись"')
                 else:
                     _db = ARMDataBase()
                     _sql = "SELECT id_prog FROM subjects WHERE id_sub=" + subjects_selected
@@ -750,7 +750,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
-                                    '"Сохранить в выбранную запись"')
+                                    '"Сохранить выбранную запись"')
                 else:
                     _db = ARMDataBase()
                     gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
@@ -853,7 +853,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                 'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                 'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
-                                '"Сохранить в выбранную запись"')
+                                '"Сохранить выбранную запись"')
             else:
                 for enrollment in self.enr_ui.list_cb_checked:
                     _sql = "SELECT id_sis FROM subs_in_studs WHERE id_student=" + enrollment_selected + \
@@ -2826,6 +2826,7 @@ class MainWindow(QtWidgets.QMainWindow):
         thread_list.append(task)
         task.deamon = True
         task.start()
+
 
 class OutlayCreate:
     def __call__(self, outlay_data):

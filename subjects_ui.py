@@ -128,7 +128,7 @@ class Ui_Subjects(object):
         _translate = QtCore.QCoreApplication.translate
         Subjects.setWindowTitle(_translate("Subjects", "Предметы"))
         self.pushButton_sub_add.setText(_translate("Subjects", "Добавить новую запись"))
-        self.pushButton_sub_save.setText(_translate("Subjects", "Сохранить в выбранную запись"))
+        self.pushButton_sub_save.setText(_translate("Subjects", "Сохранить выбранную запись"))
         self.label_sub_name.setText(_translate("Subjects", "Наименование предмета"))
         self.label_sub_tax.setText(_translate("Subjects", "Преподавательская почасовая, руб."))
         self.label_sub_teach.setText(_translate("Subjects", "Преподаватель"))

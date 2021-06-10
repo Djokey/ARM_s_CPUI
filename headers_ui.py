@@ -143,7 +143,7 @@ class Ui_Headers(object):
         _translate = QtCore.QCoreApplication.translate
         Headers.setWindowTitle(_translate("Headers", "Реестр руководителей"))
         self.pushButton_headers_add.setText(_translate("Headers", "Добавить новую запись"))
-        self.pushButton_headers_save.setText(_translate("Headers", "Сохранить в выбранную запись"))
+        self.pushButton_headers_save.setText(_translate("Headers", "Сохранить выбранную запись"))
         self.label_headers_fullname.setText(_translate("Headers", "Фамилия Имя Отчество"))
         self.label_headers_prof.setText(_translate("Headers", "Должность"))
         self.label_headers_phone.setText(_translate("Headers", "Телефон (не обязательно)"))

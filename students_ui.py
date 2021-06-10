@@ -171,7 +171,7 @@ class Ui_Students(object):
         _translate = QtCore.QCoreApplication.translate
         Students.setWindowTitle(_translate("Students", "Обучающиеся"))
         self.pushButton_stud_add.setText(_translate("Students", "Добавить новую запись"))
-        self.pushButton_stud_save.setText(_translate("Students", "Сохранить в выбранную запись"))
+        self.pushButton_stud_save.setText(_translate("Students", "Сохранить выбранную запись"))
         self.label_stud_fullname.setText(_translate("Students", "ФИО обучающегося"))
         self.label_stud_group.setText(_translate("Students", "Группа"))
         self.label_stud_birthday.setText(_translate("Students", "День рождения (день, месяц, год)"))

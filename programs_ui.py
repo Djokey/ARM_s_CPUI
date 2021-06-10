@@ -143,7 +143,7 @@ class Ui_Programs(object):
         _translate = QtCore.QCoreApplication.translate
         Programs.setWindowTitle(_translate("Programs", "Образовательные программы"))
         self.pushButton_programs_add.setText(_translate("Programs", "Добавить новую запись"))
-        self.pushButton_programs_save.setText(_translate("Programs", "Сохранить в выбранную запись"))
+        self.pushButton_programs_save.setText(_translate("Programs", "Сохранить выбранную запись"))
         self.label_prog_name.setText(_translate("Programs", "Наименование образовательной программы"))
         self.label_prog_range.setText(_translate("Programs", "Продолжительность месяцев\n"
 "(Например: 4 или 8)"))
