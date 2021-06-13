@@ -416,20 +416,33 @@ class Ui_MainWindow(object):
         self.vL_tab_other.addWidget(self.widget_other)
         self.tabWidget_Main.addTab(self.tab_other, "")
 
-        # Main actions menu and other
+        # Main setups
         self.vL_widget_Main.addWidget(self.tabWidget_Main)
         self.hL_mainwidget.addWidget(self.widget_Main)
         MainWindow.setCentralWidget(self.mainwidget)
+
+        # MenuBar
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 932, 21))
         self.menubar.setObjectName("menubar")
         self.menu = QtWidgets.QMenu(self.menubar)
         self.menu.setObjectName("menu")
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
-        self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
+
+        # Settings
+        self.settings = QtWidgets.QAction(MainWindow)
+        self.settings.setObjectName("settings")
+        self.menu.addAction(self.settings)
         self.menubar.addAction(self.menu.menuAction())
+
+        # Status Bar
+        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar.setObjectName(u"statusbar")
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.statusbar.setFont(font)
+        MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
         self.tabWidget_Main.setCurrentIndex(0)
@@ -471,3 +484,4 @@ class Ui_MainWindow(object):
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(self.tab_notes), _translate("MainWindow", "Служебные записки"))
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(self.tab_other), _translate("MainWindow", "Прочие"))
         self.menu.setTitle(_translate("MainWindow", "Настройки"))
+        self.settings.setText(_translate("MainWindow", "Почта"))

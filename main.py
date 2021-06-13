@@ -7,7 +7,13 @@ import win32print
 import datetime
 import docx
 import res
+import imaplib
+import email
+import py_config as pc
+import psutil
 
+from time import sleep
+from subprocess import check_output
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtCore, QtGui, QtWidgets
 from docx.oxml import OxmlElement
@@ -30,6 +36,7 @@ from timetable_edit_ui import *
 from outlay_printer_ui import *
 from decree_enrollment import *
 from decree_creator_ui import *
+from settings_ui import *
 # My DataBase controller
 from arm_db import *
 
@@ -1015,6 +1022,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_enrollment_roster.clicked.connect(lambda: self.enrollment_win())
         self.decree_ui.pushButton_decree_enrollment.clicked.connect(lambda: self.decree_enr_win())
         self.ui.pushButton_outlay.clicked.connect(lambda: self.outlay_win())
+        self.ui.settings.triggered.connect(lambda: self.settings_window())
 
         self.head_ui.pushButton_headers_add.clicked.connect(lambda: headers_control_db('add'))
         self.head_ui.pushButton_headers_save.clicked.connect(lambda: headers_control_db('save'))
@@ -2827,6 +2835,34 @@ class MainWindow(QtWidgets.QMainWindow):
         task.deamon = True
         task.start()
 
+    def settings_window(self, war_icon=":/sfu_logo.ico"):
+        def save_settings():
+            pc.set_option('login', settings_win.lEdit_mail.text())
+            pc.set_option('password', settings_win.lEdit_password.text())
+            pc.set_option('mail', settings_win.lEdit_service.text())
+            pc.set_option('sender', settings_win.lEdit_sender.text())
+            pc.set_option('path_for_save_letters', settings_win.lEdit_path.text())
+            pc.set_option('time_sleep', str(settings_win.spin_rate.value() * 60))
+            set_win.close()
+        set_win = QtWidgets.QDialog(self)
+        settings_win = Ui_Settings()
+        settings_win.setupUi(set_win)
+        set_win.setWindowTitle('Settings')
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(war_icon), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        set_win.setWindowIcon(icon)
+
+        settings_win.lEdit_mail.setText(pc.get_option('login'))
+        settings_win.lEdit_password.setText(pc.get_option('password'))
+        settings_win.lEdit_service.setText(pc.get_option('mail'))
+        settings_win.lEdit_sender.setText(pc.get_option('sender'))
+        settings_win.lEdit_path.setText(pc.get_option('path_for_save_letters'))
+        settings_win.spin_rate.setValue(int(int(pc.get_option('time_sleep')) / 60))
+
+        settings_win.btn_save.clicked.connect(lambda: save_settings())
+        settings_win.btn_back.clicked.connect(lambda: set_win.close())
+        set_win.exec_()
+
 
 class OutlayCreate:
     def __call__(self, outlay_data):
@@ -3664,6 +3700,115 @@ class TimetableCreate:
         create_timetable_doc(sub)
 
 
+def check_new_messages():
+    thread_list = []
+    task = threading.Thread(target=CheckNewMessage(), args=())
+    thread_list.append(task)
+    task.deamon = True
+    task.name = "MailCheckerARM"
+    task.start()
+
+
+class CheckNewMessage:
+    def __call__(self):
+        while threading.main_thread().is_alive():
+            try:
+                if pc.get_option('login') != "None" \
+                and pc.get_option('password') != "None" \
+                and pc.get_option('sender') != "None":
+                    check_new_message()
+            except Exception:
+                pass
+            t = 0
+            while (t < 60 and threading.main_thread().is_alive()) or (t < int(pc.get_option("time_sleep")) and threading.main_thread().is_alive()):
+                t += 5
+                sleep(5)
+
+
+def check_new_message():
+    def set_name_doc(_folder):
+        def select_doc_name(doc, path_doc, _folder):
+            if doc.paragraphs[0].runs[0].text.startswith("Договор"):
+                os.rename(
+                    path_doc,
+                    f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор .docx"
+                )
+            elif doc.paragraphs[0].runs[0].text.startswith(
+                    "                                                                       "):
+                os.rename(
+                    path_doc,
+                    f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление .docx"
+                )
+            elif doc.paragraphs[0].runs[0].text.startswith("Конфиденциально"):
+                os.rename(
+                    path_doc,
+                    f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ .docx"
+                )
+            elif doc.paragraphs[0].runs[0].text.startswith("ФИО:"):
+                os.rename(
+                    path_doc,
+                    f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx"
+                )
+
+        select_doc_name(
+            docx.Document(f"{pc.get_option('path_for_save_letters')}{_folder}\\1.docx"),
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\1.docx",
+            _folder
+        )
+        select_doc_name(
+            docx.Document(f"{pc.get_option('path_for_save_letters')}{_folder}\\2.docx"),
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\2.docx",
+            _folder
+        )
+        select_doc_name(
+            docx.Document(f"{pc.get_option('path_for_save_letters')}{_folder}\\3.docx"),
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\3.docx",
+            _folder
+        )
+        select_doc_name(
+            docx.Document(f"{pc.get_option('path_for_save_letters')}{_folder}\\4.docx"),
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\4.docx",
+            _folder
+        )
+
+        doc = docx.Document(f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx")
+        stud_name = doc.paragraphs[0].runs[-1].text
+        os.rename(
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор .docx",
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор {stud_name}.docx"
+        )
+        os.rename(
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление .docx",
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление {stud_name}.docx"
+        )
+        os.rename(
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ .docx",
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ {stud_name}.docx"
+        )
+        os.rename(
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx",
+            f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные {stud_name}.docx"
+        )
+        return stud_name
+
+    mail = MailConnect()
+    email_list = mail.check_list_message().decode("utf-8")
+    new_letters = mail.parse_new_messages(email_list)
+    folders = []
+    for letter in new_letters:
+        folders.append(mail.take_files(letter))
+    mail.close()
+    for folder in folders:
+        try:
+            name_stud = set_name_doc(folder)
+            os.rename(
+                f"{pc.get_option('path_for_save_letters')}{folder}",
+                f"{pc.get_option('path_for_save_letters')}{folder} {name_stud}"
+            )
+        except Exception:
+            pass
+
+
 def open_file(command):
     thread_list = []
     task = threading.Thread(target=OpenFile(), args=(command,))
@@ -4062,6 +4207,95 @@ def set_doc_warning(war_name, war_text, war_icon=":/sfu_logo.ico"):
     _set_doc_warning.exec_()
 
 
+# Class for MailConnect
+class MailConnect:
+    def __init__(
+            self,
+            login=pc.get_option("login"),
+            password=pc.get_option("password"),
+            email_address=pc.get_option("mail")
+    ):
+        self.mail = imaplib.IMAP4_SSL(email_address)
+        self.mail.login(login, password)
+
+    def check_list_message(self):
+        self.mail.select("inbox")
+        result, data = self.mail.uid('search', None, "ALL")
+        return data[0]
+
+    def check_from(self, uid_message):
+        latest_email_uid = uid_message
+        result, data = self.mail.uid('fetch', latest_email_uid, '(RFC822)')
+        raw_email = data[0][1]
+        try:
+            message_info = email.message_from_string(raw_email.decode("UTF-8"))
+        except UnicodeDecodeError:
+            message_info = email.message_from_string(raw_email.decode("cp1251"))
+        except Exception:
+            pass
+        return email.utils.parseaddr(message_info['From'])[1]
+
+    def parse_new_messages(self, _email_list):
+        old_list = pc.get_option("letters").split()
+        el = _email_list.split()
+        new_messages = []
+        for i in old_list:
+            if i in el:
+                el.remove(i)
+        if el:
+            for i in el:
+                old_list.append(i)
+            new_list = ""
+            for i in old_list:
+                new_list += i + " "
+            new_list = new_list[:-1]
+            pc.set_option("letters", new_list)
+            for i in el:
+                if self.check_from(i) == pc.get_option("sender"):
+                    new_messages.append(i)
+        return new_messages
+
+    def take_files(self, uid_message):
+        result, data = self.mail.uid('fetch', uid_message, '(RFC822)')
+        raw_email = data[0][1]
+        _email_message = email.message_from_bytes(raw_email)
+        message_path = "000000"
+        folders = os.listdir(pc.get_option('path_for_save_letters'))
+        for i in range(len(folders)):
+            folders[i] = folders[i][:6]
+        while message_path in folders:
+            message_path = int(message_path)
+            message_path += 1
+            message_path = str(message_path)
+            while len(message_path) < 6:
+                message_path = "0" + message_path
+        os.mkdir(f"{pc.get_option('path_for_save_letters')}{message_path}")
+        if _email_message.is_multipart():
+            cpui_mail_files = 0
+            for part in _email_message.walk():
+                filename = part.get_filename()
+                if filename:
+                    cpui_mail_files += 1
+                    with open(f"{pc.get_option('path_for_save_letters')}{message_path}\\{str(cpui_mail_files)}.docx",
+                              'wb') as new_file:
+                        new_file.write(part.get_payload(decode=True))
+        return message_path
+
+    def close(self, close_mode=False):
+        self.mail.close()
+        if not close_mode:
+            self.mail.logout()
+
+
+def get_pid():
+    try:
+        line = check_output('tasklist /fi "Imagename eq ARMsCPUI.exe"').split()
+        ret = int(line[14])
+    except IndexError:
+        ret = None
+    return ret
+
+
 # Func for main window start
 def main_win_start():
     app = QtWidgets.QApplication([])
@@ -4072,9 +4306,17 @@ def main_win_start():
 
 # Main func
 def main():
+    check_new_messages()
     main_win_start()
 
 
 # Start application if her main
 if __name__ == "__main__":
+    pid = get_pid()
+    if pid:
+        parent = psutil.Process(pid)
+        for child in parent.children(recursive=True):
+            child.kill()
+        parent.kill()
+        sleep(3)
     main()
