@@ -330,53 +330,66 @@ class MainWindow(QtWidgets.QMainWindow):
             headers_selected = ''
             if type_post == 'save':
                 for i in headers_list:
-                    if i.objectName() == 'vL_sAWContent_headers_list':
-                        pass
+                    if i.objectName().startswith('clb_') and i.isChecked():
+                        headers_selected = i.objectName().split('_')[-1]
+                        _set_doc_warning = 0
+                        break
                     else:
-                        if i.isChecked():
-                            headers_selected = i.objectName().split('_')[-1]
-                            _set_doc_warning = 0
-                            break
-                        else:
-                            _set_doc_warning = 1
+                        _set_doc_warning = 1
                 if _set_doc_warning:
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
                                     '"Сохранить выбранную запись"')
                 else:
+                    if len(self.head_ui.textEdit_headers_fullname.toPlainText().split()) == 3:
+                        _db = ARMDataBase()
+                        _sql = "UPDATE headers SET " \
+                               "head_name = '{0}', " \
+                               "head_phone = '{1}', " \
+                               "head_mail = '{2}', " \
+                               "head_web = '{3}', " \
+                               "head_prof = '{4}' " \
+                               "WHERE id_head = '{5}'".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
+                                                              self.head_ui.textEdit_headers_phone.toPlainText(),
+                                                              self.head_ui.textEdit_headers_mail.toPlainText(),
+                                                              self.head_ui.textEdit_headers_web.toPlainText(),
+                                                              self.head_ui.textEdit_headers_prof.toPlainText(),
+                                                              headers_selected)
+                        _db.query(_sql)
+                        _db.close()
+                        self.load_db_headers()
+                    else:
+                        set_doc_warning("Ошибка (не правильный формат имени)",
+                                        'Необходимо ввести имя состоящее из 3-х частей:\n\n'
+                                        '"Иванов Иван Андреевич"\n'
+                                        '"Иванов И А"\n'
+                                        '"Иванов И. А."\n\n'
+                                        'Обязательно используйте пробелы!')
+            elif type_post == 'add':
+                if len(self.head_ui.textEdit_headers_fullname.toPlainText().split()) == 3:
                     _db = ARMDataBase()
-                    _sql = "UPDATE headers SET " \
-                           "head_name = '{0}', " \
-                           "head_phone = '{1}', " \
-                           "head_mail = '{2}', " \
-                           "head_web = '{3}', " \
-                           "head_prof = '{4}' " \
-                           "WHERE id_head = '{5}'".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
-                                                          self.head_ui.textEdit_headers_phone.toPlainText(),
-                                                          self.head_ui.textEdit_headers_mail.toPlainText(),
-                                                          self.head_ui.textEdit_headers_web.toPlainText(),
-                                                          self.head_ui.textEdit_headers_prof.toPlainText(),
-                                                          headers_selected)
+                    _sql = "INSERT INTO headers VALUES(" \
+                           "NULL," \
+                           "'{0}'," \
+                           "'{1}'," \
+                           "'{2}'," \
+                           "'{3}'," \
+                           "'{4}')".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
+                                           self.head_ui.textEdit_headers_phone.toPlainText(),
+                                           self.head_ui.textEdit_headers_mail.toPlainText(),
+                                           self.head_ui.textEdit_headers_web.toPlainText(),
+                                           self.head_ui.textEdit_headers_prof.toPlainText())
                     _db.query(_sql)
                     _db.close()
                     self.load_db_headers()
-            elif type_post == 'add':
-                _db = ARMDataBase()
-                _sql = "INSERT INTO headers VALUES(" \
-                       "NULL," \
-                       "'{0}'," \
-                       "'{1}'," \
-                       "'{2}'," \
-                       "'{3}'," \
-                       "'{4}')".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
-                                       self.head_ui.textEdit_headers_phone.toPlainText(),
-                                       self.head_ui.textEdit_headers_mail.toPlainText(),
-                                       self.head_ui.textEdit_headers_web.toPlainText(),
-                                       self.head_ui.textEdit_headers_prof.toPlainText())
-                _db.query(_sql)
-                _db.close()
-                self.load_db_headers()
+                else:
+                    set_doc_warning("Ошибка (не правильный формат имени)",
+                                    'Необходимо ввести имя состоящее из 3-х частей:\n\n'
+                                    '"Иванов Иван Андреевич"\n'
+                                    '"Иванов И А"\n'
+                                    '"Иванов И. А."\n\n'
+                                    'Обязательно используйте пробелы!')
             elif type_post == "del":
                 for i in headers_list:
                     if i.objectName() == 'vL_sAWContent_headers_list':
@@ -494,53 +507,66 @@ class MainWindow(QtWidgets.QMainWindow):
             teachers_selected = ''
             if type_post == 'save':
                 for i in teachers_list:
-                    if i.objectName() == 'vL_sAWContent_teachers_list':
-                        pass
+                    if i.objectName().startswith('clb_') and i.isChecked():
+                        teachers_selected = i.objectName().split('_')[-1]
+                        _set_doc_warning = 0
+                        break
                     else:
-                        if i.isChecked():
-                            teachers_selected = i.objectName().split('_')[-1]
-                            _set_doc_warning = 0
-                            break
-                        else:
-                            _set_doc_warning = 1
+                        _set_doc_warning = 1
                 if _set_doc_warning:
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
                                     '"Сохранить выбранную запись"')
                 else:
+                    if len(self.teach_ui.textEdit_teachers_fullname.toPlainText()) == 3:
+                        _db = ARMDataBase()
+                        _sql = "UPDATE teachers SET " \
+                               "teacher_name = '{0}', " \
+                               "teacher_phone = '{1}', " \
+                               "teacher_mail = '{2}', " \
+                               "teacher_web = '{3}', " \
+                               "teacher_prof = '{4}' " \
+                               "WHERE id_teacher = '{5}'".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
+                                                               self.teach_ui.textEdit_teachers_phone.toPlainText(),
+                                                               self.teach_ui.textEdit_teachers_mail.toPlainText(),
+                                                               self.teach_ui.textEdit_teachers_web.toPlainText(),
+                                                               self.teach_ui.textEdit_teachers_prof.toPlainText(),
+                                                               teachers_selected)
+                        _db.query(_sql)
+                        _db.close()
+                        self.load_db_teachers()
+                    else:
+                        set_doc_warning("Ошибка (не правильный формат имени)",
+                                        'Необходимо ввести имя состоящее из 3-х частей:\n\n'
+                                        '"Иванов Иван Андреевич"\n'
+                                        '"Иванов И А"\n'
+                                        '"Иванов И. А."\n\n'
+                                        'Обязательно используйте пробелы!')
+            elif type_post == 'add':
+                if len(self.teach_ui.textEdit_teachers_fullname.toPlainText()) == 3:
                     _db = ARMDataBase()
-                    _sql = "UPDATE teachers SET " \
-                           "teacher_name = '{0}', " \
-                           "teacher_phone = '{1}', " \
-                           "teacher_mail = '{2}', " \
-                           "teacher_web = '{3}', " \
-                           "teacher_prof = '{4}' " \
-                           "WHERE id_teacher = '{5}'".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
-                                                           self.teach_ui.textEdit_teachers_phone.toPlainText(),
-                                                           self.teach_ui.textEdit_teachers_mail.toPlainText(),
-                                                           self.teach_ui.textEdit_teachers_web.toPlainText(),
-                                                           self.teach_ui.textEdit_teachers_prof.toPlainText(),
-                                                           teachers_selected)
+                    _sql = "INSERT INTO teachers VALUES(" \
+                           "NULL," \
+                           "'{0}'," \
+                           "'{1}'," \
+                           "'{2}'," \
+                           "'{3}'," \
+                           "'{4}')".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
+                                           self.teach_ui.textEdit_teachers_phone.toPlainText(),
+                                           self.teach_ui.textEdit_teachers_mail.toPlainText(),
+                                           self.teach_ui.textEdit_teachers_web.toPlainText(),
+                                           self.teach_ui.textEdit_teachers_prof.toPlainText())
                     _db.query(_sql)
                     _db.close()
                     self.load_db_teachers()
-            elif type_post == 'add':
-                _db = ARMDataBase()
-                _sql = "INSERT INTO teachers VALUES(" \
-                       "NULL," \
-                       "'{0}'," \
-                       "'{1}'," \
-                       "'{2}'," \
-                       "'{3}'," \
-                       "'{4}')".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
-                                       self.teach_ui.textEdit_teachers_phone.toPlainText(),
-                                       self.teach_ui.textEdit_teachers_mail.toPlainText(),
-                                       self.teach_ui.textEdit_teachers_web.toPlainText(),
-                                       self.teach_ui.textEdit_teachers_prof.toPlainText())
-                _db.query(_sql)
-                _db.close()
-                self.load_db_teachers()
+                else:
+                    set_doc_warning("Ошибка (не правильный формат имени)",
+                                    'Необходимо ввести имя состоящее из 3-х частей:\n\n'
+                                    '"Иванов Иван Андреевич"\n'
+                                    '"Иванов И А"\n'
+                                    '"Иванов И. А."\n\n'
+                                    'Обязательно используйте пробелы!')
             elif type_post == "del":
                 for i in teachers_list:
                     if i.objectName() == 'vL_sAWContent_teachers_list':
@@ -744,78 +770,91 @@ class MainWindow(QtWidgets.QMainWindow):
             students_selected = ''
             if type_post == 'save':
                 for i in students_list:
-                    if i.objectName() == 'vL_sAWContent_stud_list':
-                        pass
+                    if i.objectName().startswith('clb_') and i.isChecked():
+                        students_selected = i.objectName().split('_')[-1]
+                        _set_doc_warning = 0
+                        break
                     else:
-                        if i.isChecked():
-                            students_selected = i.objectName().split('_')[-1]
-                            _set_doc_warning = 0
-                            break
-                        else:
-                            _set_doc_warning = 1
+                        _set_doc_warning = 1
                 if _set_doc_warning:
                     set_doc_warning("Ошибка (не выбрана запись для изменения)",
                                     'Сначала выберите запись для изменения.\n\nНажмите на нужную запись, '
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
                                     '"Сохранить выбранную запись"')
                 else:
-                    _db = ARMDataBase()
-                    gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
-                    _sql = "SELECT id_group FROM students WHERE id_student=" + students_selected
-                    group_checker = str(_db.query(_sql)[0][0])
-                    if group_checker != str(self.stud_ui.comboBox_stud_group.currentData()):
-                        _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + students_selected
+                    if len(self.stud_ui.textEdit_stud_fullname.toPlainText()) == 3:
+                        _db = ARMDataBase()
+                        gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
+                        _sql = "SELECT id_group FROM students WHERE id_student=" + students_selected
+                        group_checker = str(_db.query(_sql)[0][0])
+                        if group_checker != str(self.stud_ui.comboBox_stud_group.currentData()):
+                            _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + students_selected
+                            _db.query(_sql)
+                        _sql = "UPDATE students SET " \
+                               "student_name = '{0}', " \
+                               "id_group = '{1}', " \
+                               "student_birthday = '{2}', " \
+                               "student_phone = '{3}', " \
+                               "student_gender = '{4}', " \
+                               "student_city = '{5}', " \
+                               "student_einst = '{6}', " \
+                               "student_mail = '{7}', " \
+                               "student_web = '{8}' " \
+                               "WHERE id_student = '{9}'".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
+                                                                 str(self.stud_ui.comboBox_stud_group.currentData()),
+                                                                 self.stud_ui.dateEdit_stud_birthday.date().toString(
+                                                                     'dd.MM.yyyy'),
+                                                                 self.stud_ui.lineEdit_stud_phone.text(),
+                                                                 gender,
+                                                                 self.stud_ui.lineEdit_stud_city.text(),
+                                                                 self.stud_ui.lineEdit_stud_einst.text(),
+                                                                 self.stud_ui.lineEdit_stud_mail.text(),
+                                                                 self.stud_ui.lineEdit_stud_web.text(),
+                                                                 students_selected)
                         _db.query(_sql)
-                    _sql = "UPDATE students SET " \
-                           "student_name = '{0}', " \
-                           "id_group = '{1}', " \
-                           "student_birthday = '{2}', " \
-                           "student_phone = '{3}', " \
-                           "student_gender = '{4}', " \
-                           "student_city = '{5}', " \
-                           "student_einst = '{6}', " \
-                           "student_mail = '{7}', " \
-                           "student_web = '{8}' " \
-                           "WHERE id_student = '{9}'".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
-                                                             str(self.stud_ui.comboBox_stud_group.currentData()),
-                                                             self.stud_ui.dateEdit_stud_birthday.date().toString(
-                                                                 'dd.MM.yyyy'),
-                                                             self.stud_ui.lineEdit_stud_phone.text(),
-                                                             gender,
-                                                             self.stud_ui.lineEdit_stud_city.text(),
-                                                             self.stud_ui.lineEdit_stud_einst.text(),
-                                                             self.stud_ui.lineEdit_stud_mail.text(),
-                                                             self.stud_ui.lineEdit_stud_web.text(),
-                                                             students_selected)
+                        _db.close()
+                        self.load_db_students()
+                    else:
+                        set_doc_warning("Ошибка (не правильный формат имени)",
+                                        'Необходимо ввести имя состоящее из 3-х частей:\n\n'
+                                        '"Иванов Иван Андреевич"\n'
+                                        '"Иванов И А"\n'
+                                        '"Иванов И. А."\n\n'
+                                        'Обязательно используйте пробелы!')
+            elif type_post == 'add':
+                if len(self.stud_ui.textEdit_stud_fullname.toPlainText()) == 3:
+                    gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
+                    _db = ARMDataBase()
+                    _sql = "INSERT INTO students VALUES(" \
+                           "NULL," \
+                           "'{0}'," \
+                           "'{1}'," \
+                           "'{2}'," \
+                           "'{3}'," \
+                           "'{4}'," \
+                           "'{5}'," \
+                           "'{6}'," \
+                           "'{7}'," \
+                           "'{8}')".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
+                                           str(self.stud_ui.comboBox_stud_group.currentData()),
+                                           self.stud_ui.dateEdit_stud_birthday.date().toString(
+                                               'dd.MM.yyyy'),
+                                           self.stud_ui.lineEdit_stud_phone.text(),
+                                           gender,
+                                           self.stud_ui.lineEdit_stud_city.text(),
+                                           self.stud_ui.lineEdit_stud_einst.text(),
+                                           self.stud_ui.lineEdit_stud_mail.text(),
+                                           self.stud_ui.lineEdit_stud_web.text())
                     _db.query(_sql)
                     _db.close()
                     self.load_db_students()
-            elif type_post == 'add':
-                gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
-                _db = ARMDataBase()
-                _sql = "INSERT INTO students VALUES(" \
-                       "NULL," \
-                       "'{0}'," \
-                       "'{1}'," \
-                       "'{2}'," \
-                       "'{3}'," \
-                       "'{4}'," \
-                       "'{5}'," \
-                       "'{6}'," \
-                       "'{7}'," \
-                       "'{8}')".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
-                                       str(self.stud_ui.comboBox_stud_group.currentData()),
-                                       self.stud_ui.dateEdit_stud_birthday.date().toString(
-                                           'dd.MM.yyyy'),
-                                       self.stud_ui.lineEdit_stud_phone.text(),
-                                       gender,
-                                       self.stud_ui.lineEdit_stud_city.text(),
-                                       self.stud_ui.lineEdit_stud_einst.text(),
-                                       self.stud_ui.lineEdit_stud_mail.text(),
-                                       self.stud_ui.lineEdit_stud_web.text())
-                _db.query(_sql)
-                _db.close()
-                self.load_db_students()
+                else:
+                    set_doc_warning("Ошибка (не правильный формат имени)",
+                                    'Необходимо ввести имя состоящее из 3-х частей:\n\n'
+                                    '"Иванов Иван Андреевич"\n'
+                                    '"Иванов И А"\n'
+                                    '"Иванов И. А."\n\n'
+                                    'Обязательно используйте пробелы!')
             elif type_post == "del":
                 for i in students_list:
                     if i.objectName() == 'vL_sAWContent_stud_list':
@@ -3720,7 +3759,8 @@ class CheckNewMessage:
             except Exception:
                 pass
             t = 0
-            while (t < 60 and threading.main_thread().is_alive()) or (t < int(pc.get_option("time_sleep")) and threading.main_thread().is_alive()):
+            while (t < 60 and threading.main_thread().is_alive()) \
+            or (t < int(pc.get_option("time_sleep")) and threading.main_thread().is_alive()):
                 t += 5
                 sleep(5)
 
@@ -3749,6 +3789,11 @@ def check_new_message():
                     path_doc,
                     f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx"
                 )
+            else:
+                os.rename(
+                    path_doc,
+                    f"{pc.get_option('path_for_save_letters')}{_folder}\\Неизвестный документ.docx"
+                )
 
         select_doc_name(
             docx.Document(f"{pc.get_option('path_for_save_letters')}{_folder}\\1.docx"),
@@ -3773,22 +3818,34 @@ def check_new_message():
 
         doc = docx.Document(f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx")
         stud_name = doc.paragraphs[0].runs[-1].text
-        os.rename(
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор .docx",
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор {stud_name}.docx"
-        )
-        os.rename(
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление .docx",
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление {stud_name}.docx"
-        )
-        os.rename(
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ .docx",
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ {stud_name}.docx"
-        )
-        os.rename(
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx",
-            f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные {stud_name}.docx"
-        )
+        try:
+            os.rename(
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор .docx",
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор {stud_name}.docx"
+            )
+        except FileNotFoundError:
+            pass
+        try:
+            os.rename(
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление .docx",
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление {stud_name}.docx"
+            )
+        except FileNotFoundError:
+            pass
+        try:
+            os.rename(
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ .docx",
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ {stud_name}.docx"
+            )
+        except FileNotFoundError:
+            pass
+        try:
+            os.rename(
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx",
+                f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные {stud_name}.docx"
+            )
+        except FileNotFoundError:
+            pass
         return stud_name
 
     mail = MailConnect()
