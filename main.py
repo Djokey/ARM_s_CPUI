@@ -10,10 +10,9 @@ import res
 import imaplib
 import email
 import py_config as pc
-import psutil
 
 from time import sleep
-from subprocess import check_output
+from subprocess import check_output, call
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtCore, QtGui, QtWidgets
 from docx.oxml import OxmlElement
@@ -1004,7 +1003,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 docx_folder = r'Сметы'
             for clb in content_list:
                 if clb.objectName().startswith("clb_") and clb.isChecked():
-                    command = f'"{os.getcwd()}\\Документы\\{docx_folder}\\{clb.text()}.docx"'
+                    command = f'"{os.path.abspath(os.curdir)}\\Документы\\{docx_folder}\\{clb.text()}.docx"'
                     open_file(command)
 
         # SETUP BUTS
@@ -3743,8 +3742,7 @@ class CheckNewMessage:
             while (t < 60 \
                    and threading.main_thread().is_alive()) \
             or (t < int(pc.get_option("time_sleep")) \
-                and threading.main_thread().is_alive())\
-            or pc.get_option('checking') == '0':
+                and threading.main_thread().is_alive()):
                 t += 5
                 sleep(5)
 
@@ -3864,7 +3862,7 @@ class OpenFile:
 
 
 def open_file_function(command):
-    os.system(command)
+    call(f'{command}', shell=True)
 
 
 def create_timetable_doc(_sub):
@@ -4328,25 +4326,8 @@ class MailConnect:
             self.mail.logout()
 
 
-def get_pid():
-    try:
-        line = check_output('tasklist /fi "Imagename eq ARMsCPUI.exe"').split()
-        ret = int(line[14])
-    except IndexError:
-        ret = None
-    return ret
-
-
 # Func for main window start
 def main_win_start():
-    if not os.path.exists('Документы/Записки'):
-        os.mkdir('Документы/Записки')
-    if not os.path.exists('Документы/Приказы'):
-        os.mkdir('Документы/Приказы')
-    if not os.path.exists('Документы/Сметы'):
-        os.mkdir('Документы/Сметы')
-    if not os.path.exists('Документы/Расписания'):
-        os.mkdir('Документы/Расписания')
     app = QtWidgets.QApplication([])
     application = MainWindow()
     application.show()
@@ -4361,11 +4342,4 @@ def main():
 
 # Start application if her main
 if __name__ == "__main__":
-    pid = get_pid()
-    if pid:
-        parent = psutil.Process(pid)
-        for child in parent.children(recursive=True):
-            child.kill()
-        parent.kill()
-        sleep(3)
     main()
