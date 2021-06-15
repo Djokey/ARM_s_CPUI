@@ -214,62 +214,58 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.widget_outlay.hide()
             self.ui.widget_roster.show()
 
-        # But for notes
-        def notes_print():
-            notes_list = self.ui.sAWContent_notes.children()
+        def print_selected_doc():
+            current_tab = self.ui.tabWidget_docx.currentWidget()
+            current_list = current_tab.findChild(
+                QtWidgets.QWidget,
+                'sAWContent_' + current_tab.objectName().split('_')[-1]).children()
             _set_doc_warning = 1
-            for i in notes_list:
-                if i.objectName() == 'vL_sAWContent_notes':
-                    pass
+            if 'decree' in current_tab.objectName():
+                folder = 'Приказы'
+            elif 'notes' in current_tab.objectName():
+                folder = 'Записки'
+            elif 'ttable' in current_tab.objectName():
+                folder = 'Расписания'
+            elif 'outlay' in current_tab.objectName():
+                folder = 'Сметы'
+            for i in current_list:
+                if i.objectName().startswith('clb') and i.isChecked():
+                    print_doc(os.path.abspath(os.curdir) + f'/Документы/{folder}/', i.text() + '.docx')
+                    _set_doc_warning = 0
+                    break
                 else:
-                    if i.isChecked():
-                        print_doc(os.path.abspath(os.curdir) + r'/Документы/Записки/', i.text() + '.docx')
-                        _set_doc_warning = 0
-                        break
-                    else:
-                        _set_doc_warning = 1
+                    _set_doc_warning = 1
             if _set_doc_warning:
                 set_doc_warning("Ошибка (не выбран документ для печати)",
                                 'Сначала выберите документ для печати.\n\nНажмите на нужный документ, '
                                 'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
 
-        # But for decree
-        def decree_print():
-            decree_list = self.ui.sAWContent_decree.children()
+        def del_selected_doc():
+            current_tab = self.ui.tabWidget_docx.currentWidget()
+            current_list = current_tab.findChild(
+                QtWidgets.QWidget,
+                'sAWContent_' + current_tab.objectName().split('_')[-1]).children()
             _set_doc_warning = 1
-            for i in decree_list:
-                if i.objectName() == 'vL_sAWContent_decree':
-                    pass
+            if 'decree' in current_tab.objectName():
+                folder = 'Приказы'
+            elif 'notes' in current_tab.objectName():
+                folder = 'Записки'
+            elif 'ttable' in current_tab.objectName():
+                folder = 'Расписания'
+            elif 'outlay' in current_tab.objectName():
+                folder = 'Сметы'
+            for i in current_list:
+                if i.objectName().startswith('clb') and i.isChecked():
+                    os.remove(f'{os.path.abspath(os.curdir)}/Документы/{folder}/{i.text()}.docx')
+                    self.load_list()
+                    _set_doc_warning = 0
+                    break
                 else:
-                    if i.isChecked():
-                        print_doc(os.path.abspath(os.curdir) + r'/Документы/Приказы/', i.text() + '.docx')
-                        _set_doc_warning = 0
-                        break
-                    else:
-                        _set_doc_warning = 1
+                    _set_doc_warning = 1
             if _set_doc_warning:
-                set_doc_warning("Ошибка (не выбран документ для печати)",
-                                'Сначала выберите документ для печати.\n\nНажмите на нужный документ, '
-                                'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
-
-        # But for decree
-        def other_print():
-            other_list = self.ui.sAWContent_other.children()
-            _set_doc_warning = 1
-            for i in other_list:
-                if i.objectName() == 'vL_sAWContent_other':
-                    pass
-                else:
-                    if i.isChecked():
-                        print_doc(os.path.abspath(os.curdir) + r'/Документы/Прочие/', i.text() + '.docx')
-                        _set_doc_warning = 0
-                        break
-                    else:
-                        _set_doc_warning = 1
-            if _set_doc_warning:
-                set_doc_warning("Ошибка (не выбран документ для печати)",
-                                'Сначала выберите документ для печати.\n\nНажмите на нужный документ, '
-                                'чтобы выбрать его, а потом нажмите на кнопку "Печать"')
+                set_doc_warning("Ошибка (не выбран документ для удаления)",
+                                'Сначала выберите документ для удаления.\n\nНажмите на нужный документ, '
+                                'чтобы выбрать его, а потом нажмите на кнопку "Удалить выбранный документ"')
 
         # But for timetable
         def timetable_print():
@@ -290,7 +286,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 'Сначала выберите расписание для сохранения.\n\nНажмите на нужное расписание, '
                                 'чтобы выбрать его, а потом нажмите на кнопку "Сохранить как документ"')
             else:
-                path = os.getcwd() + r"/Документы/Прочие/"
+                path = os.getcwd() + r"/Документы/Расписания/"
                 _db = ARMDataBase('arm_db.db')
                 _sql = "SELECT sub_name, id_prog FROM subjects WHERE id_sub=" + i_name
                 timetable = _db.query(_sql)
@@ -320,7 +316,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     filename = f"Расписание {group_name} {timetable[0][1]} №{str_copy_index}.docx"
                 _db.close()
                 set_doc_warning("Отправлено",
-                                'Документ будет сохранен в прочие документы.\n'
+                                'Документ будет сохранен в расписания.\n'
                                 'Имя документа:\n' + filename)
 
         # But for notes
@@ -994,7 +990,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         b = 1
 
         def open_selected_docx():
-            current_tab = self.ui.tabWidget_Main.currentWidget()
+            current_tab = self.ui.tabWidget_docx.currentWidget()
             content_list = current_tab.findChild(
                 QtWidgets.QWidget, "sAWContent_" + current_tab.objectName().split("_")[-1]).children()
             docx_folder = ""
@@ -1002,46 +998,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 docx_folder = r'Приказы'
             elif "note" in current_tab.objectName():
                 docx_folder = r'Записки'
-            elif "other" in current_tab.objectName():
-                docx_folder = r'Прочие'
+            elif "ttable" in current_tab.objectName():
+                docx_folder = r'Расписания'
+            elif "outlay" in current_tab.objectName():
+                docx_folder = r'Сметы'
             for clb in content_list:
                 if clb.objectName().startswith("clb_") and clb.isChecked():
                     command = f'"{os.getcwd()}\\Документы\\{docx_folder}\\{clb.text()}.docx"'
                     open_file(command)
 
-        def search_element(parent):
-            items = []
-            parent_widget = self.ui.tabWidget_Main.findChild(QtWidgets.QWidget, "sAWContent_" + parent).children()
-            for item in parent_widget:
-                if item.objectName().startswith("clb_"):
-                    items.append(item)
-            _search_text = self.ui.tabWidget_Main.findChild(
-                QtWidgets.QWidget, "lineEdit_search_" + parent).text().lower()
-            for i in items:
-                searcher = i.text().lower()
-                if _search_text in searcher:
-                    i.show()
-                else:
-                    i.hide()
-
         # SETUP BUTS
-        self.ui.pushButton_print_notes.clicked.connect(lambda: notes_print())
-        self.ui.pushButton_print_decree.clicked.connect(lambda: decree_print())
-        self.ui.pushButton_edit_decree.clicked.connect(lambda: open_selected_docx())
-        self.ui.pushButton_edit_notes.clicked.connect(lambda: open_selected_docx())
-        self.ui.pushButton_edit_other.clicked.connect(lambda: open_selected_docx())
+        self.ui.pushButton_print_docx.clicked.connect(lambda: print_selected_doc())
+        self.ui.pushButton_edit_docx.clicked.connect(lambda: open_selected_docx())
+        self.ui.pushButton_del_docx.clicked.connect(lambda: del_selected_doc())
         self.ui.pushButton_print_timetable.clicked.connect(lambda: timetable_print())
-        self.ui.pushButton_print_other.clicked.connect(lambda: other_print())
-        self.ui.pushButton_update_other.clicked.connect(
-            lambda: self.load_list(r'Прочие', self.ui.sAWContent_other, 'other_'))
-        self.ui.pushButton_update_decree.clicked.connect(
-            lambda: self.load_list(r'Приказы', self.ui.sAWContent_decree, 'decree_'))
-        self.ui.pushButton_update_notes.clicked.connect(
-            lambda: self.load_list(r'Записки', self.ui.sAWContent_notes, 'note_'))
-        self.ui.lineEdit_search_notes.textEdited.connect(lambda: search_element("notes"))
-        self.ui.lineEdit_search_decree.textEdited.connect(lambda: search_element("decree"))
-        self.ui.lineEdit_search_other.textEdited.connect(lambda: search_element("other"))
-        self.ui.pushButton_create_decree.clicked.connect(lambda: self.decree_creator_exec())
+        self.ui.pushButton_update_docx.clicked.connect(
+            lambda: self.load_list())
+        self.ui.lineEdit_search_docx.textEdited.connect(lambda: self.load_list())
+        self.ui.pushButton_create_docx.clicked.connect(lambda: self.decree_creator_exec())
 
         self.ui.pushButton_update_timetable.clicked.connect(
             lambda: self.load_db_timetable(self.ui.lineEdit_search_timetable.text()))
@@ -1134,32 +1108,36 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_outlay.hide()
         self.decree_ui.widget_enrollment.hide()
 
-    def load_list(self, _dir, parent_list, first_name):
-        clear_list(parent_list.children())
-        list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + _dir)
-        items = []
-        for _docx in list_dir:
-            if not _docx.startswith("~$"):
-                pos1 = _docx.find('№')
-                doc_id = _docx[pos1 + 1:pos1 + 7]
-                items.append(self.create_list_el("clb_" + first_name + doc_id, _docx[:-5], parent_list))
+    def load_list(self):
+        clear_list(self.ui.sAWContent_decree.children())
+        clear_list(self.ui.sAWContent_outlay.children())
+        clear_list(self.ui.sAWContent_notes.children())
+        clear_list(self.ui.sAWContent_ttable.children())
+        list_docx = [['decree', self.ui.sAWContent_decree, 'Приказы'],
+                     ['notes', self.ui.sAWContent_notes, 'Записки'],
+                     ['ttable', self.ui.sAWContent_ttable, 'Расписания'],
+                     ['outlay', self.ui.sAWContent_outlay, 'Сметы']]
+        for docxs in list_docx:
+            list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + docxs[2])
+            items = []
+            for _docx in list_dir:
+                if not _docx.startswith("~$"):
+                    pos1 = _docx.find('№')
+                    doc_id = _docx[pos1 + 1:pos1 + 7]
+                    items.append(self.create_list_el("clb_" + docxs[0] + doc_id, _docx[:-5], docxs[1]))
 
-
-        _search_text = self.ui.tabWidget_Main.findChild(
-            QtWidgets.QWidget, "lineEdit_search_" + parent_list.objectName().split("_")[-1]).text().lower()
-
-        for i in items:
-            searcher = i.text().lower()
-            if _search_text in searcher:
-                i.show()
-            else:
-                i.hide()
+            _search_text = self.ui.tabWidget_Main.findChild(
+                QtWidgets.QWidget, "lineEdit_search_docx").text().lower()
+            for i in items:
+                searcher = i.text().lower()
+                if _search_text in searcher:
+                    i.show()
+                else:
+                    i.hide()
 
     def load_for_start(self):
         # Loading doc's for lists with doc's
-        self.load_list(r'Приказы', self.ui.sAWContent_decree, 'decree_')
-        self.load_list(r'Записки', self.ui.sAWContent_notes, 'note_')
-        self.load_list(r'Прочие', self.ui.sAWContent_other, 'other_')
+        self.load_list()
         self.load_db_timetable()
         # Add normal icon
         self.ui.icon = QtGui.QIcon()
@@ -2769,7 +2747,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         outlay_data[j]["teacher"] = line.text()
                 j += 1
 
-        path = os.getcwd() + r"/Документы/Прочие/"
+        path = os.getcwd() + r"/Документы/Сметы/"
         filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
                    f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} №000000.docx"
         desk_list_dir = os.listdir(path)
@@ -2792,8 +2770,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.outlay_printer.close()
         set_doc_warning("Отправлено",
-                        'Документ будет сохранен в прочие документы.\n'
-                        'Вы сможете найти его во вкладке "Прочие"\n'
+                        'Документ будет сохранен в сметы.\n'
+                        'Вы сможете найти его во вкладке "Документы"->"Сметы"\n'
                         'Имя документа:\n' +
                         filename)
 
@@ -2863,8 +2841,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.decree_creator.close()
         set_doc_warning("Отправлено",
-                        'Документ будет сохранен в прочие документы.\n'
-                        'Вы сможете найти его во вкладке "Прочие"\n'
+                        'Документ будет сохранен в приказы.\n'
+                        'Вы сможете найти его во вкладке "Документы"->"Приказы"\n'
                         'Имя документа:\n' +
                         filename)
 
@@ -2876,6 +2854,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def settings_window(self, war_icon=":/sfu_logo.ico"):
         def save_settings():
+            pc.set_option('checking', str(int(settings_win.check_mail.isChecked())))
             pc.set_option('login', settings_win.lEdit_mail.text())
             pc.set_option('password', settings_win.lEdit_password.text())
             pc.set_option('mail', settings_win.lEdit_service.text())
@@ -2891,6 +2870,7 @@ class MainWindow(QtWidgets.QMainWindow):
         icon.addPixmap(QtGui.QPixmap(war_icon), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         set_win.setWindowIcon(icon)
 
+        settings_win.check_mail.setChecked(int(pc.get_option('checking')))
         settings_win.lEdit_mail.setText(pc.get_option('login'))
         settings_win.lEdit_password.setText(pc.get_option('password'))
         settings_win.lEdit_service.setText(pc.get_option('mail'))
@@ -2914,7 +2894,7 @@ class DecreeEnrollmentCreate:
 
 
 def create_outlay_doc(outlay_data):
-    path = os.getcwd() + r"/Документы/Прочие/"
+    path = os.getcwd() + r"/Документы/Сметы/"
 
     filename = f"Смета {outlay_data[4]['class']} класс на курсы {outlay_data[4]['program']}," \
                f" {outlay_data[4]['date_start'][-2:]}-{outlay_data[4]['date_end'][-4:]} №000000.docx"
@@ -3754,13 +3734,17 @@ class CheckNewMessage:
             try:
                 if pc.get_option('login') != "None" \
                 and pc.get_option('password') != "None" \
+                and pc.get_option('checking') != "0" \
                 and pc.get_option('sender') != "None":
                     check_new_message()
             except Exception:
                 pass
             t = 0
-            while (t < 60 and threading.main_thread().is_alive()) \
-            or (t < int(pc.get_option("time_sleep")) and threading.main_thread().is_alive()):
+            while (t < 60 \
+                   and threading.main_thread().is_alive()) \
+            or (t < int(pc.get_option("time_sleep")) \
+                and threading.main_thread().is_alive())\
+            or pc.get_option('checking') == '0':
                 t += 5
                 sleep(5)
 
@@ -3884,7 +3868,7 @@ def open_file_function(command):
 
 
 def create_timetable_doc(_sub):
-    path = os.getcwd() + r"/Документы/Прочие/"
+    path = os.getcwd() + r"/Документы/Расписания/"
 
     _db = ARMDataBase('arm_db.db')
 
@@ -4355,6 +4339,14 @@ def get_pid():
 
 # Func for main window start
 def main_win_start():
+    if not os.path.exists('Документы/Записки'):
+        os.mkdir('Документы/Записки')
+    if not os.path.exists('Документы/Приказы'):
+        os.mkdir('Документы/Приказы')
+    if not os.path.exists('Документы/Сметы'):
+        os.mkdir('Документы/Сметы')
+    if not os.path.exists('Документы/Расписания'):
+        os.mkdir('Документы/Расписания')
     app = QtWidgets.QApplication([])
     application = MainWindow()
     application.show()

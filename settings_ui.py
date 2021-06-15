@@ -14,6 +14,10 @@ class Ui_Settings(object):
         self.vL_gr_box = QtWidgets.QVBoxLayout(self.gr_box)
         self.vL_gr_box.setObjectName("vL_gr_box")
 
+        self.check_mail = QtWidgets.QCheckBox()
+        self.check_mail.setObjectName("check_mail")
+        self.vL_gr_box.addWidget(self.check_mail)
+
         self.label_mail = QtWidgets.QLabel()
         self.label_mail.setObjectName("label_mail")
         self.vL_gr_box.addWidget(self.label_mail)
@@ -61,6 +65,7 @@ class Ui_Settings(object):
 
         self.spin_rate = QtWidgets.QSpinBox()
         self.spin_rate.setObjectName("spin_rate")
+        self.spin_rate.setMinimum(1)
         self.vL_gr_box.addWidget(self.spin_rate)
 
         self.label_save = QtWidgets.QLabel()
@@ -90,3 +95,4 @@ class Ui_Settings(object):
         self.label_save.setText(_translate("Settings", "Сохраняйте настройки только если знаете, что делаете!"))
         self.btn_save.setText(_translate("Settings", "Сохранить настройки"))
         self.btn_back.setText(_translate("Settings", "Отмена"))
+        self.check_mail.setText(_translate("Settings", "Проверять почту"))

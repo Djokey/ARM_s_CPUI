@@ -55,6 +55,7 @@ def create_new_config(path="config.ini"):
     user = os.environ.get("USERNAME")
     config = cp.ConfigParser()
     config.add_section("Settings")
+    config.set("Settings", "checking", r"False")
     config.set("Settings", "account", r"None")
     config.set("Settings", "password", r"None")
     config.set("Settings", "mail", r"imap.mail.ru")
