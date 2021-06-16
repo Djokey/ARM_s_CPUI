@@ -34,7 +34,9 @@ from outlay_ui import *
 from timetable_edit_ui import *
 from outlay_printer_ui import *
 from decree_enrollment import *
-from decree_creator_ui import *
+from note_passes import *
+from note_passwords import *
+from docx_creator_ui import *
 from settings_ui import *
 # My DataBase controller
 from arm_db import *
@@ -101,15 +103,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_print_ui.setupUi(self.outlay_printer)
         self.outlay_printer.setWindowTitle('Редактор сметы')
 
-        self.decree_creator = QtWidgets.QDialog(self)
-        self.decree_ui = Ui_DecreeCreator()
-        self.decree_ui.setupUi(self.decree_creator)
-        self.decree_creator.setWindowTitle('Редактор приказов')
+        self.docx_creator = QtWidgets.QDialog(self)
+        self.docx_ui = Ui_DocxCreator()
+        self.docx_ui.setupUi(self.docx_creator)
+        self.docx_creator.setWindowTitle('Редактор документов')
 
-        self.decree_ui.widget_enrollment = QtWidgets.QWidget()
-        self.decree_ui.not_main.addWidget(self.decree_ui.widget_enrollment)
+        self.docx_ui.widget_enrollment = QtWidgets.QWidget()
+        self.docx_ui.not_main.addWidget(self.docx_ui.widget_enrollment)
         self.decree_enr_ui = Ui_DecreeEnrollment()
-        self.decree_enr_ui.setupUi(self.decree_ui.widget_enrollment)
+        self.decree_enr_ui.setupUi(self.docx_ui.widget_enrollment)
+
+        self.docx_ui.widget_notepasses = QtWidgets.QWidget()
+        self.docx_ui.not_main.addWidget(self.docx_ui.widget_notepasses)
+        self.note_passes_ui = Ui_NotePasses()
+        self.note_passes_ui.setupUi(self.docx_ui.widget_notepasses)
+
+        self.docx_ui.widget_notepasswords = QtWidgets.QWidget()
+        self.docx_ui.not_main.addWidget(self.docx_ui.widget_notepasswords)
+        self.note_passwords_ui = Ui_NotePasswords()
+        self.note_passwords_ui.setupUi(self.docx_ui.widget_notepasswords)
 
         self.disk_dir = os.getenv("SystemDrive")
         self.user = os.environ.get("USERNAME")
@@ -165,9 +177,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # Func for edit database table Enrollment
     def decree_enr_win(self):
-        self.decree_ui.widget_main.hide()
-        self.decree_ui.widget_enrollment.show()
+        self.docx_ui.widget_main.hide()
+        self.docx_ui.widget_enrollment.show()
         self.load_db_decree_enr()
+
+    # Func for edit database table Enrollment
+    def note_passes_win(self):
+        self.docx_ui.widget_main.hide()
+        self.docx_ui.widget_notepasses.show()
+        self.load_db_note_passes()
+
+    # Func for edit database table Enrollment
+    def note_passwords_win(self):
+        self.docx_ui.widget_main.hide()
+        self.docx_ui.widget_notepasswords.show()
+        self.load_db_note_passwords()
 
     # Func for edit database table Outlay
     def outlay_win(self):
@@ -206,8 +230,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.widget_roster.show()
 
         def decree_enr_back():
-            self.decree_ui.widget_enrollment.hide()
-            self.decree_ui.widget_main.show()
+            self.docx_ui.widget_enrollment.hide()
+            self.docx_ui.widget_main.show()
+
+        def note_passes_back():
+            self.docx_ui.widget_notepasses.hide()
+            self.docx_ui.widget_main.show()
+
+        def note_passwords_back():
+            self.docx_ui.widget_notepasswords.hide()
+            self.docx_ui.widget_main.show()
 
         def outlay_back():
             self.ui.widget_outlay.hide()
@@ -1016,7 +1048,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_subjects_roster.clicked.connect(lambda: self.subjects_win())
         self.ui.pushButton_students_roster.clicked.connect(lambda: self.students_win())
         self.ui.pushButton_enrollment_roster.clicked.connect(lambda: self.enrollment_win())
-        self.decree_ui.pushButton_decree_enrollment.clicked.connect(lambda: self.decree_enr_win())
         self.ui.pushButton_outlay.clicked.connect(lambda: self.outlay_win())
         self.ui.settings.triggered.connect(lambda: self.settings_window())
 
@@ -1076,8 +1107,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_ui.radio_col_4.clicked.connect(lambda: outlay_control_db())
         self.outlay_print_ui.pushButton_save_doc.clicked.connect(lambda: self.create_outlay())
 
+        self.docx_ui.pushButton_decree_enrollment.clicked.connect(lambda: self.decree_enr_win())
+        self.docx_ui.pushButton_note_passes.clicked.connect(lambda: self.note_passes_win())
+        self.docx_ui.pushButton_note_passwords.clicked.connect(lambda: self.note_passwords_win())
+
         self.decree_enr_ui.pushButton_back.clicked.connect(lambda: decree_enr_back())
         self.decree_enr_ui.pushButton_save_doc.clicked.connect(lambda: self.create_decree_enr())
+
+        self.note_passes_ui.pushButton_back.clicked.connect(lambda: note_passes_back())
+        self.note_passes_ui.pushButton_save_doc.clicked.connect(lambda: self.create_note_passes())
+
+        self.note_passwords_ui.pushButton_back.clicked.connect(lambda: note_passwords_back())
+        self.note_passwords_ui.pushButton_save_doc.clicked.connect(lambda: self.create_note_passwords())
 
     # END BUTTONS
     def clear_for_start(self):
@@ -1089,7 +1130,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_students.hide()
         self.ui.widget_enrollment.hide()
         self.ui.widget_outlay.hide()
-        self.decree_ui.widget_enrollment.hide()
+        self.docx_ui.widget_enrollment.hide()
 
     def load_list(self):
         clear_list(self.ui.sAWContent_decree.children())
@@ -1131,9 +1172,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ttable.setWindowIcon(icon)
         self.outlay_printer.setWindowIcon(icon)
 
-    # create_list_el('Здесь objectName для кнопки',
-    #                     'Здесь текст, который будет показан',
-    #                     'Родительский элемент, с которым будет работа')
     def create_list_el(self, name, text, ls, auto_exclusive=True):
         a = QtWidgets.QCommandLinkButton(ls)
         font = QtGui.QFont()
@@ -2003,6 +2041,250 @@ class MainWindow(QtWidgets.QMainWindow):
 
         _db.close()
 
+    # Loader database for enrollment in decree
+    def load_db_note_passes(self):
+        def setup_prog_info():
+            uncheck_clb()
+            _db = ARMDataBase()
+            selected_prog = self.note_passes_ui.comboBox_prog.currentData()
+            if selected_prog is not None:
+                _sql = "SELECT id_group FROM groups WHERE id_prog=" + str(selected_prog)
+                try:
+                    groups = _db.query(_sql)[0][0]
+                except IndexError:
+                    groups = 1
+                self.note_passes_ui.comboBox_group.setCurrentIndex(self.note_passes_ui.comboBox_group.findData(groups))
+                _sql = "SELECT prog_range_dates FROM programs WHERE id_prog=" + \
+                       str(self.note_passes_ui.comboBox_prog.currentData())
+                try:
+                    dates = _db.query(_sql)[0][0].split("|")
+                    self.note_passes_ui.dateEdit_date_start.setDate(datetime.date(int(dates[0].split('.')[2]),
+                                                                                 int(dates[0].split('.')[1]),
+                                                                                 int(dates[0].split('.')[0])))
+                    self.note_passes_ui.dateEdit_date_end.setDate(datetime.date(int(dates[1].split('.')[2]),
+                                                                               int(dates[1].split('.')[1]),
+                                                                               int(dates[1].split('.')[0])))
+                except AttributeError:
+                    pass
+            _db.close()
+
+        def setup_group_info():
+            uncheck_clb()
+            clear_list(self.note_passes_ui.sAWContent_outlay_studs.children())
+            selected_group = self.note_passes_ui.comboBox_group.currentData()
+            _db = ARMDataBase()
+            if selected_group is not None:
+                _sql = "SELECT id_student, student_name FROM students WHERE id_group=" + str(selected_group)
+                students = _db.query(_sql)
+            else:
+                students = []
+            for i in range(len(students)):
+                studs = []
+                for h in students[i]:
+                    studs.append(h)
+                _sql = "SELECT id_sub FROM subs_in_studs WHERE id_student=" + str(studs[0])
+                stud_subs = _db.query(_sql)
+                subjects = ''
+                for s in range(len(stud_subs)):
+                    _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(stud_subs[s][0])
+                    _sql1 = "SELECT student_numcontract, student_datecontract, status FROM subs_in_studs WHERE id_sub=" + str(
+                        stud_subs[s][0]) + " AND id_student=" + str(studs[0])
+                    contracts = _db.query(_sql1)
+                    if s > 0:
+                        if contracts[0][2] == "1":
+                            subjects += ', ' + _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0],
+                                                                                         contracts[0][1])
+                    else:
+                        if contracts[0][2] == "1":
+                            subjects += _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0], contracts[0][1])
+                if subjects != "":
+                    studs[0] = 'clb_decree_enr_' + str(studs[0])
+                    studs[1] = 'ФИО: ' + studs[1] + '\n' if studs[1] is not None and studs[1] != '' else ''
+                    studs.append('Предметы: ' + subjects)
+                    stud_but = self.create_list_el(studs[0],
+                                                   studs[1] + studs[2],
+                                                   self.note_passes_ui.sAWContent_outlay_studs,
+                                                   auto_exclusive=False)
+                    stud_but.clicked.connect(lambda: uncheck_clb())
+            _db.close()
+
+        def check_all_group():
+            for clb in self.note_passes_ui.sAWContent_outlay_studs.children():
+                if clb.objectName().startswith("clb_"):
+                    clb.setChecked(True) if self.note_passes_ui.checkBox_all_group.isChecked() else clb.setChecked(False)
+
+        def uncheck_clb():
+            self.note_passes_ui.checkBox_all_group.setChecked(False)
+
+        self.note_passes_ui.comboBox_head.clear()
+        self.note_passes_ui.comboBox_prog.clear()
+        self.note_passes_ui.comboBox_manager_cpui.clear()
+        self.note_passes_ui.comboBox_group.clear()
+        clear_list(self.note_passes_ui.sAWContent_outlay_studs.children())
+        _db = ARMDataBase()
+
+        self.note_passes_ui.checkBox_all_group.clicked.connect(lambda: check_all_group())
+
+        # comboBox for Head load
+        _sql = "SELECT id_head, head_name, head_prof FROM headers"
+        headers = _db.query(_sql)
+        for head in headers:
+            self.create_combo_box_el(self.note_passes_ui.comboBox_head, head[0], str(head[2]) + " | " + str(head[1]))
+            if "директор хти" in str(head[2]).lower():
+                self.note_passes_ui.comboBox_head.setCurrentIndex(
+                    self.note_passes_ui.comboBox_head.findData(head[0]))
+
+        # comboBox for Programs load
+        _sql = "SELECT id_prog, prog_name, prog_range_dates FROM programs"
+        programs = _db.query(_sql)
+        for prog in programs:
+            self.create_combo_box_el(self.note_passes_ui.comboBox_prog, prog[0], str(prog[1]))
+        self.note_passes_ui.comboBox_prog.currentIndexChanged.connect(lambda: setup_prog_info())
+
+        # comboBox for Groups load
+        _sql = "SELECT id_group, group_name FROM groups"
+        groups = _db.query(_sql)
+        for group in groups:
+            self.create_combo_box_el(self.note_passes_ui.comboBox_group, group[0], str(group[1]))
+        self.note_passes_ui.comboBox_group.currentIndexChanged.connect(lambda: setup_group_info())
+
+        # comboBox for manager CPUI load
+        for head in headers:
+            self.create_combo_box_el(self.note_passes_ui.comboBox_manager_cpui, head[0],
+                                     str(head[2]) + " | " + str(head[1]))
+            if "цпюи" in str(head[2]).lower() and 'зав' in str(head[2]).lower():
+                self.note_passes_ui.comboBox_manager_cpui.setCurrentIndex(
+                    self.note_passes_ui.comboBox_manager_cpui.findData(head[0]))
+
+        # dateEdit for date note
+        self.note_passes_ui.dateEdit_date.setDate(datetime.datetime.today())
+
+        _db.close()
+
+    # Loader database for enrollment in decree
+    def load_db_note_passwords(self):
+        def setup_prog_info():
+            uncheck_clb()
+            _db = ARMDataBase()
+            selected_prog = self.note_passwords_ui.comboBox_prog.currentData()
+            if selected_prog is not None:
+                _sql = "SELECT id_group FROM groups WHERE id_prog=" + str(selected_prog)
+                try:
+                    groups = _db.query(_sql)[0][0]
+                except IndexError:
+                    groups = 1
+                self.note_passwords_ui.comboBox_group.setCurrentIndex(self.note_passwords_ui.comboBox_group.findData(groups))
+                _sql = "SELECT prog_range_dates FROM programs WHERE id_prog=" + \
+                       str(self.note_passwords_ui.comboBox_prog.currentData())
+                try:
+                    dates = _db.query(_sql)[0][0].split("|")
+                    self.note_passwords_ui.dateEdit_date_start.setDate(datetime.date(int(dates[0].split('.')[2]),
+                                                                                 int(dates[0].split('.')[1]),
+                                                                                 int(dates[0].split('.')[0])))
+                    self.note_passwords_ui.dateEdit_date_end.setDate(datetime.date(int(dates[1].split('.')[2]),
+                                                                               int(dates[1].split('.')[1]),
+                                                                               int(dates[1].split('.')[0])))
+                except AttributeError:
+                    pass
+            _db.close()
+
+        def setup_group_info():
+            uncheck_clb()
+            clear_list(self.note_passwords_ui.sAWContent_outlay_studs.children())
+            selected_group = self.note_passwords_ui.comboBox_group.currentData()
+            _db = ARMDataBase()
+            if selected_group is not None:
+                _sql = "SELECT id_student, student_name FROM students WHERE id_group=" + str(selected_group)
+                students = _db.query(_sql)
+            else:
+                students = []
+            for i in range(len(students)):
+                studs = []
+                for h in students[i]:
+                    studs.append(h)
+                _sql = "SELECT id_sub FROM subs_in_studs WHERE id_student=" + str(studs[0])
+                stud_subs = _db.query(_sql)
+                subjects = ''
+                for s in range(len(stud_subs)):
+                    _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(stud_subs[s][0])
+                    _sql1 = "SELECT student_numcontract, student_datecontract, status FROM subs_in_studs WHERE id_sub=" + str(
+                        stud_subs[s][0]) + " AND id_student=" + str(studs[0])
+                    contracts = _db.query(_sql1)
+                    if s > 0:
+                        if contracts[0][2] == "1":
+                            subjects += ', ' + _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0],
+                                                                                         contracts[0][1])
+                    else:
+                        if contracts[0][2] == "1":
+                            subjects += _db.query(_sql)[0][0] + '({}, {})'.format(contracts[0][0], contracts[0][1])
+                if subjects != "":
+                    studs[0] = 'clb_decree_enr_' + str(studs[0])
+                    studs[1] = 'ФИО: ' + studs[1] + '\n' if studs[1] is not None and studs[1] != '' else ''
+                    studs.append('Предметы: ' + subjects)
+                    stud_but = self.create_list_el(studs[0],
+                                                   studs[1] + studs[2],
+                                                   self.note_passwords_ui.sAWContent_outlay_studs,
+                                                   auto_exclusive=False)
+                    stud_but.clicked.connect(lambda: uncheck_clb())
+            _db.close()
+
+        def check_all_group():
+            for clb in self.note_passwords_ui.sAWContent_outlay_studs.children():
+                if clb.objectName().startswith("clb_"):
+                    clb.setChecked(True) if self.note_passwords_ui.checkBox_all_group.isChecked() else clb.setChecked(False)
+
+        def uncheck_clb():
+            self.note_passwords_ui.checkBox_all_group.setChecked(False)
+
+        self.note_passwords_ui.comboBox_head.clear()
+        self.note_passwords_ui.comboBox_prog.clear()
+        self.note_passwords_ui.comboBox_manager_cpui.clear()
+        self.note_passwords_ui.comboBox_group.clear()
+        clear_list(self.note_passwords_ui.sAWContent_outlay_studs.children())
+        _db = ARMDataBase()
+
+        self.note_passwords_ui.checkBox_all_group.clicked.connect(lambda: check_all_group())
+
+        # comboBox for Head load
+        _sql = "SELECT id_head, head_name, head_prof FROM headers"
+        headers = _db.query(_sql)
+        for head in headers:
+            self.create_combo_box_el(self.note_passwords_ui.comboBox_head, head[0], str(head[2]) + " | " + str(head[1]))
+            if "информац" in str(head[2]).lower() \
+            and 'технол' in str(head[2]).lower() \
+            and 'департа' in str(head[2]).lower() \
+            and 'руковод' in str(head[2]).lower():
+                self.note_passwords_ui.comboBox_head.setCurrentIndex(
+                    self.note_passwords_ui.comboBox_head.findData(head[0]))
+
+        # comboBox for Programs load
+        _sql = "SELECT id_prog, prog_name, prog_range_dates FROM programs"
+        programs = _db.query(_sql)
+        for prog in programs:
+            self.create_combo_box_el(self.note_passwords_ui.comboBox_prog, prog[0], str(prog[1]))
+        self.note_passwords_ui.comboBox_prog.currentIndexChanged.connect(lambda: setup_prog_info())
+
+        # comboBox for Groups load
+        _sql = "SELECT id_group, group_name FROM groups"
+        groups = _db.query(_sql)
+        for group in groups:
+            self.create_combo_box_el(self.note_passwords_ui.comboBox_group, group[0], str(group[1]))
+        self.note_passwords_ui.comboBox_group.currentIndexChanged.connect(lambda: setup_group_info())
+
+        # comboBox for manager CPUI load
+        for head in headers:
+            self.create_combo_box_el(self.note_passwords_ui.comboBox_manager_cpui, head[0],
+                                     str(head[2]) + " | " + str(head[1]))
+            if "цпюи" in str(head[2]).lower() and 'зав' in str(head[2]).lower():
+                self.note_passwords_ui.comboBox_manager_cpui.setCurrentIndex(
+                    self.note_passwords_ui.comboBox_manager_cpui.findData(head[0]))
+
+        # dateEdit for date note
+        self.note_passwords_ui.dateEdit_date_before.setDate(datetime.datetime.today())
+        self.note_passwords_ui.dateEdit_date.setDate(datetime.datetime.today())
+
+        _db.close()
+
     # Loader database for Outlay Calculator
     def load_db_outlay(self):
         _db = ARMDataBase()
@@ -2338,10 +2620,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_printer.exec_()
 
     def decree_creator_exec(self):
-        self.load_db_decree_enr()
-        self.decree_ui.widget_enrollment.hide()
-        self.decree_ui.widget_main.show()
-        self.decree_creator.exec_()
+        self.docx_ui.widget_enrollment.hide()
+        self.docx_ui.widget_notepasses.hide()
+        self.docx_ui.widget_notepasswords.hide()
+        self.docx_ui.widget_main.show()
+        self.docx_creator.exec_()
 
     def select_list_el(self):
         if self.ttable_ui.sAWContent_hours_list.findChild(
@@ -2820,7 +3103,7 @@ class MainWindow(QtWidgets.QMainWindow):
                        f"{decree_enr_data[0]['date_start'][-2:]}-{decree_enr_data[0]['date_end'][-2:]}, " \
                        f"{decree_enr_data[0]['group']} №{str_copy_index}.docx"
 
-        self.decree_creator.close()
+        self.docx_creator.close()
         set_doc_warning("Отправлено",
                         'Документ будет сохранен в приказы.\n'
                         'Вы сможете найти его во вкладке "Документы"->"Приказы"\n'
@@ -2829,6 +3112,140 @@ class MainWindow(QtWidgets.QMainWindow):
 
         thread_list = []
         task = threading.Thread(target=DecreeEnrollmentCreate(), args=(decree_enr_data,))
+        thread_list.append(task)
+        task.deamon = True
+        task.start()
+
+    def create_note_passes(self):
+        _db = ARMDataBase()
+        _sql = "SELECT prog_range FROM programs WHERE id_prog=" + str(self.note_passes_ui.comboBox_prog.currentData())
+        try:
+            prog_range = str(_db.query(_sql)[0][0])
+        except IndexError:
+            prog_range = "8"
+        data = [{
+            "head": self.note_passes_ui.comboBox_head.currentText(),
+            "program": self.note_passes_ui.comboBox_prog.currentText(),
+            "group": self.note_passes_ui.comboBox_group.currentText(),
+            "date_start": self.note_passes_ui.dateEdit_date_start.date().toString('dd.MM.yyyy'),
+            "date_end": self.note_passes_ui.dateEdit_date_end.date().toString('dd.MM.yyyy'),
+            "date": self.note_passes_ui.dateEdit_date.date().toString('dd.MM.yyyy'),
+            "manager_cpui": self.note_passes_ui.comboBox_manager_cpui.currentText()},
+        []]
+        for i in self.note_passes_ui.sAWContent_outlay_studs.children():
+            if i.objectName().startswith("clb_") and i.isChecked():
+                _sql = "SELECT student_name FROM students WHERE id_student=" + i.objectName().split("_")[-1]
+                student_name = _db.query(_sql)[0][0]
+                _sql = "SELECT id_sub FROM subs_in_studs WHERE status='1' AND id_student=" + i.objectName().split("_")[-1]
+                subs_id = _db.query(_sql)
+                subs_list = ''
+                j = 0
+                for sub in range(len(subs_id)):
+                    _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(subs_id[sub][0])
+                    if sub == 0:
+                        subs_list += _db.query(_sql)[0][0].lower()
+                    elif sub > 0:
+                        subs_list += ', ' + _db.query(_sql)[0][0].lower()
+                data[1].append([student_name, subs_list])
+        _db.close()
+
+        path = os.getcwd() + r"/Документы/Записки/"
+        filename = f"Служебка на пропуска {data[0]['program']}, " \
+                   f"{data[0]['group']} №000000.docx"
+        desk_list_dir = os.listdir(path)
+        indexes_list = []
+        for doc_in_dir in desk_list_dir:
+            start_index = doc_in_dir.find('№')
+            if start_index:
+                try:
+                    indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+                except Exception:
+                    pass
+        copy_index = 0
+        while copy_index in indexes_list:
+            copy_index += 1
+            str_copy_index = str(copy_index)
+            while len(str_copy_index) < 6:
+                str_copy_index = "0" + str_copy_index
+            filename = f"Служебка на пропуска {data[0]['program']}, " \
+                       f"{data[0]['group']} №{str_copy_index}.docx"
+
+        self.docx_creator.close()
+        set_doc_warning("Отправлено",
+                        'Документ будет сохранен в служебные записки.\n'
+                        'Вы сможете найти его во вкладке "Документы"->"Служебные записки"\n'
+                        'Имя документа:\n' +
+                        filename)
+
+        thread_list = []
+        task = threading.Thread(target=NotePassesCreate(), args=(data,))
+        thread_list.append(task)
+        task.deamon = True
+        task.start()
+
+    def create_note_passwords(self):
+        _db = ARMDataBase()
+        _sql = "SELECT prog_range FROM programs WHERE id_prog=" + str(self.note_passwords_ui.comboBox_prog.currentData())
+        try:
+            prog_range = str(_db.query(_sql)[0][0])
+        except IndexError:
+            prog_range = "8"
+        data = [{
+            "depo": self.note_passwords_ui.comboBox_head.currentText(),
+            "program": self.note_passwords_ui.comboBox_prog.currentText(),
+            "prog_range": prog_range,
+            "group": self.note_passwords_ui.comboBox_group.currentText(),
+            "date_before": self.note_passwords_ui.dateEdit_date_before.date().toString('dd.MM.yyyy'),
+            "date": self.note_passwords_ui.dateEdit_date.date().toString('dd.MM.yyyy'),
+            "manager_cpui": self.note_passwords_ui.comboBox_manager_cpui.currentText()},
+        []]
+        for i in self.note_passwords_ui.sAWContent_outlay_studs.children():
+            if i.objectName().startswith("clb_") and i.isChecked():
+                _sql = "SELECT student_name FROM students WHERE id_student=" + i.objectName().split("_")[-1]
+                student_name = _db.query(_sql)[0][0]
+                _sql = "SELECT id_sub FROM subs_in_studs WHERE status='1' AND id_student=" + i.objectName().split("_")[-1]
+                subs_id = _db.query(_sql)
+                subs_list = ''
+                j = 0
+                for sub in range(len(subs_id)):
+                    _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(subs_id[sub][0])
+                    if sub == 0:
+                        subs_list += _db.query(_sql)[0][0].lower()
+                    elif sub > 0:
+                        subs_list += ', ' + _db.query(_sql)[0][0].lower()
+                data[1].append([student_name, subs_list])
+        _db.close()
+
+        path = os.getcwd() + r"/Документы/Записки/"
+        filename = f"Служебка на пароли {data[0]['program']}, " \
+                   f"{data[0]['group']} №000000.docx"
+        desk_list_dir = os.listdir(path)
+        indexes_list = []
+        for doc_in_dir in desk_list_dir:
+            start_index = doc_in_dir.find('№')
+            if start_index:
+                try:
+                    indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+                except Exception:
+                    pass
+        copy_index = 0
+        while copy_index in indexes_list:
+            copy_index += 1
+            str_copy_index = str(copy_index)
+            while len(str_copy_index) < 6:
+                str_copy_index = "0" + str_copy_index
+            filename = f"Служебка на пароли {data[0]['program']}, " \
+                       f"{data[0]['group']} №{str_copy_index}.docx"
+
+        self.docx_creator.close()
+        set_doc_warning("Отправлено",
+                        'Документ будет сохранен в служебные записки.\n'
+                        'Вы сможете найти его во вкладке "Документы"->"Служебные записки"\n'
+                        'Имя документа:\n' +
+                        filename)
+
+        thread_list = []
+        task = threading.Thread(target=NotePasswordCreate(), args=(data,))
         thread_list.append(task)
         task.deamon = True
         task.start()
@@ -2876,6 +3293,16 @@ class OutlayCreate:
 class DecreeEnrollmentCreate:
     def __call__(self, decree_enr_data):
         create_decree_enrollment_doc(decree_enr_data)
+
+
+class NotePassesCreate:
+    def __call__(self, data):
+        create_note_passes_doc(data)
+
+
+class NotePasswordCreate:
+    def __call__(self, data):
+        create_note_password_doc(data)
 
 
 def create_outlay_doc(outlay_data):
@@ -3683,6 +4110,255 @@ def create_decree_enrollment_doc(decree_enr_data):
         bottom={"sz": 10, "val": "single", "color": "#000000"}
     )
 
+
+    # SETTINGS FOR DOCX
+    properties = doc.core_properties
+    properties.author = "ЦПЮИ ХТИ"
+    # DOCX SAVE
+    doc.save(path + filename)
+    return path, filename
+
+
+def create_note_passes_doc(data):
+    path = os.getcwd() + r"/Документы/Записки/"
+    filename = f"Служебка на пропуска {data[0]['program']}, " \
+               f"{data[0]['date_start'][-2:]}-{data[0]['date_end'][-2:]}, " \
+               f"{data[0]['group']} №000000.docx"
+    desk_list_dir = os.listdir(path)
+    indexes_list = []
+    for doc_in_dir in desk_list_dir:
+        start_index = doc_in_dir.find('№')
+        if start_index:
+            try:
+                indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+            except Exception:
+                pass
+    copy_index = 0
+    while copy_index in indexes_list:
+        copy_index += 1
+        str_copy_index = str(copy_index)
+        while len(str_copy_index) < 6:
+            str_copy_index = "0" + str_copy_index
+        filename = f"Служебка на пропуска {data[0]['program']}, " \
+                   f"{data[0]['date_start'][-2:]}-{data[0]['date_end'][-2:]}, " \
+                   f"{data[0]['group']} №{str_copy_index}.docx"
+
+    doc = docx.Document()
+
+    # START DOC / FIRST PAGE
+
+    doc.sections[0].page_height = docx.shared.Cm(29.7)
+    doc.sections[0].page_width = docx.shared.Cm(21)
+    doc.sections[0].top_margin = docx.shared.Cm(2)
+    doc.sections[0].right_margin = docx.shared.Cm(1.5)
+    doc.sections[0].left_margin = docx.shared.Cm(3)
+    doc.sections[0].bottom_margin = docx.shared.Cm(2)
+
+    # HEADER
+    add_par(doc, "Директору  ХТИ - филиала СФУ",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.RIGHT)
+    add_par(doc, f"{data[0]['head'].split(' ')[-3]} "
+                 f"{data[0]['head'].split(' ')[-2][:1]}. "
+                 f"{data[0]['head'].split(' ')[-1][:1]}.",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.RIGHT)
+    add_par(doc, "Зав. ЦПЮИ  " + f"{data[0]['manager_cpui'].split(' ')[-3]} "
+                                 f"{data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+                                 f"{data[0]['manager_cpui'].split(' ')[-1][:1]}.",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.RIGHT)
+
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE)
+    add_par(doc, "СЛУЖЕБНАЯ ЗАПИСКА",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE)
+    add_par(doc, f"{data[0]['date']} г.",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.LEFT)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE)
+    add_par(doc, f"В связи с открытием дополнительной образовательной программы «{data[0]['program']}»"
+                 f" в ЦПЮИ с {data[0]['date_start']} г. по {data[0]['date_end']} г. прошу, для обучающихся"
+                 f" в группе {data[0]['group']}, изготовить пропуска согласно списку:",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            first_line_indent=1.25)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE)
+
+    studs = []
+    for i in range(len(data[1])):
+        studs.append(data[1][i])
+    try:
+        studs.sort(key=lambda x: x[0])
+    except IndexError:
+        pass
+    for i in range(len(studs)):
+        try:
+            add_par(
+                doc,
+                f"{str(i + 1)}. {studs[i][0]} ({studs[i][1]});",
+                first_line_indent=4.5,
+                text_aligment=WD_ALIGN_PARAGRAPH.LEFT
+            )
+        except IndexError:
+            pass
+    doc.paragraphs[-1].runs[0].text = doc.paragraphs[-1].runs[0].text.replace(";", ".")
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE)
+    add_par(doc, f"Зав. ЦПЮИ                                                                   "
+                 f"{data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+                 f"{data[0]['manager_cpui'].split(' ')[-1][:1]}. "
+                 f"{data[0]['manager_cpui'].split(' ')[-3]}",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.LEFT)
+
+    # SETTINGS FOR DOCX
+    properties = doc.core_properties
+    properties.author = "ЦПЮИ ХТИ"
+    # DOCX SAVE
+    doc.save(path + filename)
+    return path, filename
+
+
+def create_note_password_doc(data):
+    path = os.getcwd() + r"/Документы/Записки/"
+    filename = f"Служебка на пароли {data[0]['program']}, " \
+               f"{data[0]['group']} №000000.docx"
+    desk_list_dir = os.listdir(path)
+    indexes_list = []
+    for doc_in_dir in desk_list_dir:
+        start_index = doc_in_dir.find('№')
+        if start_index:
+            try:
+                indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+            except Exception:
+                pass
+    copy_index = 0
+    while copy_index in indexes_list:
+        copy_index += 1
+        str_copy_index = str(copy_index)
+        while len(str_copy_index) < 6:
+            str_copy_index = "0" + str_copy_index
+        filename = f"Служебка на пароли {data[0]['program']}, " \
+                   f"{data[0]['group']} №{str_copy_index}.docx"
+
+    doc = docx.Document()
+
+    # START DOC / FIRST PAGE
+
+    doc.sections[0].page_height = docx.shared.Cm(29.7)
+    doc.sections[0].page_width = docx.shared.Cm(21)
+    doc.sections[0].top_margin = docx.shared.Cm(2)
+    doc.sections[0].right_margin = docx.shared.Cm(1.5)
+    doc.sections[0].left_margin = docx.shared.Cm(3)
+    doc.sections[0].bottom_margin = docx.shared.Cm(2)
+
+    # HEADER
+    add_par(
+        doc,
+        "Руководителю департамента",
+        first_line_indent=8.5,
+        line_spacing_rule=WD_LINE_SPACING.MULTIPLE,
+        text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+        font_size=14
+    )
+    add_par(
+        doc,
+        "информационных технологий ",
+        first_line_indent=8.5,
+        line_spacing_rule=WD_LINE_SPACING.MULTIPLE,
+        text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+        font_size=14
+    )
+    add_par(
+        doc,
+        f"{data[0]['depo'].split(' ')[-3]} "
+        f"{data[0]['depo'].split(' ')[-2][:1]}. "
+        f"{data[0]['depo'].split(' ')[-1][:1]}.",
+        first_line_indent=8.5,
+        line_spacing_rule=WD_LINE_SPACING.MULTIPLE,
+        text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+        font_size=14
+    )
+    add_par(
+        doc,
+        f"зав. кафедрой ПИМиЕД",
+        first_line_indent=8.5,
+        line_spacing_rule=WD_LINE_SPACING.MULTIPLE,
+        text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+        font_size=14
+    )
+    add_par(
+        doc,
+        f"ХТИ – филиала СФУ",
+        first_line_indent=8.5,
+        line_spacing_rule=WD_LINE_SPACING.MULTIPLE,
+        text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+        font_size=14
+    )
+    add_par(
+        doc,
+        f"{data[0]['manager_cpui'].split(' ')[-3]} "
+        f"{data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+        f"{data[0]['manager_cpui'].split(' ')[-1][:1]}.",
+        first_line_indent=8.5,
+        line_spacing_rule=WD_LINE_SPACING.MULTIPLE,
+        text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+        font_size=14
+    )
+
+
+    add_par(doc, " ", font_size=14)
+    add_par(doc, "СЛУЖЕБНАЯ ЗАПИСКА",
+            text_aligment=WD_ALIGN_PARAGRAPH.CENTER,
+        font_size=14)
+    add_par(doc, " ", font_size=14)
+    add_par(doc, f"{data[0]['date']} г.",
+            text_aligment=WD_ALIGN_PARAGRAPH.LEFT, font_size=14)
+    add_par(doc, " ", font_size=14)
+    add_par(doc, f"Прошу создать учетные записи для входа на еКурсы (https://e.sfu-kras.ru) слушателям "
+                 f"Центра подготовки юного инженера ХТИ – филиала СФУ с доступом до {data[0]['date_before']}:",
+            line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, text_aligment=WD_ALIGN_PARAGRAPH.JUSTIFY,
+            first_line_indent=1.25,
+            font_size=14)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE, font_size=14)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE, font_size=14)
+
+    studs = []
+    for i in range(len(data[1])):
+        studs.append(data[1][i])
+    try:
+        studs.sort(key=lambda x: x[0])
+    except IndexError:
+        pass
+    for i in range(len(studs)):
+        try:
+            add_par(
+                doc,
+                f"{str(i + 1)}. {studs[i][0]} ({studs[i][1]});",
+                first_line_indent=1.25,
+                text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+                font_size=14
+            )
+        except IndexError:
+            pass
+    doc.paragraphs[-1].runs[0].text = doc.paragraphs[-1].runs[0].text.replace(";", ".")
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE, font_size=14)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE, font_size=14)
+    add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.ONE_POINT_FIVE, font_size=14)
+
+    tab_manager_cpui = doc.add_table(rows=1, cols=2)
+    add_cell(
+        'Зав. кафедрой ПИМиЕД ХТИ – филилала СФУ',
+        tab_manager_cpui.cell(0, 0),
+        tab_manager_cpui.rows[0],
+        6.5, 1.4, text_alignment=WD_ALIGN_PARAGRAPH.LEFT
+    )
+    add_cell(
+        f"{data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+        f"{data[0]['manager_cpui'].split(' ')[-1][:1]}. "
+        f"{data[0]['manager_cpui'].split(' ')[-3]} ",
+        tab_manager_cpui.cell(0, 1),
+        tab_manager_cpui.rows[0],
+        10.44, 1.4, text_alignment=WD_ALIGN_PARAGRAPH.RIGHT
+    )
 
     # SETTINGS FOR DOCX
     properties = doc.core_properties
