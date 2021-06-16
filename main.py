@@ -777,79 +777,63 @@ class MainWindow(QtWidgets.QMainWindow):
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
                                     '"Сохранить выбранную запись"')
                 else:
-                    if len(self.stud_ui.textEdit_stud_fullname.toPlainText()) == 3:
-                        _db = ARMDataBase()
-                        gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
-                        _sql = "SELECT id_group FROM students WHERE id_student=" + students_selected
-                        group_checker = str(_db.query(_sql)[0][0])
-                        if group_checker != str(self.stud_ui.comboBox_stud_group.currentData()):
-                            _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + students_selected
-                            _db.query(_sql)
-                        _sql = "UPDATE students SET " \
-                               "student_name = '{0}', " \
-                               "id_group = '{1}', " \
-                               "student_birthday = '{2}', " \
-                               "student_phone = '{3}', " \
-                               "student_gender = '{4}', " \
-                               "student_city = '{5}', " \
-                               "student_einst = '{6}', " \
-                               "student_mail = '{7}', " \
-                               "student_web = '{8}' " \
-                               "WHERE id_student = '{9}'".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
-                                                                 str(self.stud_ui.comboBox_stud_group.currentData()),
-                                                                 self.stud_ui.dateEdit_stud_birthday.date().toString(
-                                                                     'dd.MM.yyyy'),
-                                                                 self.stud_ui.lineEdit_stud_phone.text(),
-                                                                 gender,
-                                                                 self.stud_ui.lineEdit_stud_city.text(),
-                                                                 self.stud_ui.lineEdit_stud_einst.text(),
-                                                                 self.stud_ui.lineEdit_stud_mail.text(),
-                                                                 self.stud_ui.lineEdit_stud_web.text(),
-                                                                 students_selected)
-                        _db.query(_sql)
-                        _db.close()
-                        self.load_db_students()
-                    else:
-                        set_doc_warning("Ошибка (не правильный формат имени)",
-                                        'Необходимо ввести имя состоящее из 3-х частей:\n\n'
-                                        '"Иванов Иван Андреевич"\n'
-                                        '"Иванов И А"\n'
-                                        '"Иванов И. А."\n\n'
-                                        'Обязательно используйте пробелы!')
-            elif type_post == 'add':
-                if len(self.stud_ui.textEdit_stud_fullname.toPlainText()) == 3:
-                    gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
                     _db = ARMDataBase()
-                    _sql = "INSERT INTO students VALUES(" \
-                           "NULL," \
-                           "'{0}'," \
-                           "'{1}'," \
-                           "'{2}'," \
-                           "'{3}'," \
-                           "'{4}'," \
-                           "'{5}'," \
-                           "'{6}'," \
-                           "'{7}'," \
-                           "'{8}')".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
-                                           str(self.stud_ui.comboBox_stud_group.currentData()),
-                                           self.stud_ui.dateEdit_stud_birthday.date().toString(
-                                               'dd.MM.yyyy'),
-                                           self.stud_ui.lineEdit_stud_phone.text(),
-                                           gender,
-                                           self.stud_ui.lineEdit_stud_city.text(),
-                                           self.stud_ui.lineEdit_stud_einst.text(),
-                                           self.stud_ui.lineEdit_stud_mail.text(),
-                                           self.stud_ui.lineEdit_stud_web.text())
+                    gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
+                    _sql = "SELECT id_group FROM students WHERE id_student=" + students_selected
+                    group_checker = str(_db.query(_sql)[0][0])
+                    if group_checker != str(self.stud_ui.comboBox_stud_group.currentData()):
+                        _sql = "UPDATE subs_in_studs SET status='0' WHERE id_student=" + students_selected
+                        _db.query(_sql)
+                    _sql = "UPDATE students SET " \
+                           "student_name = '{0}', " \
+                           "id_group = '{1}', " \
+                           "student_birthday = '{2}', " \
+                           "student_phone = '{3}', " \
+                           "student_gender = '{4}', " \
+                           "student_city = '{5}', " \
+                           "student_einst = '{6}', " \
+                           "student_mail = '{7}', " \
+                           "student_web = '{8}' " \
+                           "WHERE id_student = '{9}'".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
+                                                             str(self.stud_ui.comboBox_stud_group.currentData()),
+                                                             self.stud_ui.dateEdit_stud_birthday.date().toString(
+                                                                 'dd.MM.yyyy'),
+                                                             self.stud_ui.lineEdit_stud_phone.text(),
+                                                             gender,
+                                                             self.stud_ui.lineEdit_stud_city.text(),
+                                                             self.stud_ui.lineEdit_stud_einst.text(),
+                                                             self.stud_ui.lineEdit_stud_mail.text(),
+                                                             self.stud_ui.lineEdit_stud_web.text(),
+                                                             students_selected)
                     _db.query(_sql)
                     _db.close()
                     self.load_db_students()
-                else:
-                    set_doc_warning("Ошибка (не правильный формат имени)",
-                                    'Необходимо ввести имя состоящее из 3-х частей:\n\n'
-                                    '"Иванов Иван Андреевич"\n'
-                                    '"Иванов И А"\n'
-                                    '"Иванов И. А."\n\n'
-                                    'Обязательно используйте пробелы!')
+            elif type_post == 'add':
+                gender = 'male' if self.stud_ui.radioButton_stud_gender_male.isChecked() else 'female'
+                _db = ARMDataBase()
+                _sql = "INSERT INTO students VALUES(" \
+                       "NULL," \
+                       "'{0}'," \
+                       "'{1}'," \
+                       "'{2}'," \
+                       "'{3}'," \
+                       "'{4}'," \
+                       "'{5}'," \
+                       "'{6}'," \
+                       "'{7}'," \
+                       "'{8}')".format(self.stud_ui.textEdit_stud_fullname.toPlainText(),
+                                       str(self.stud_ui.comboBox_stud_group.currentData()),
+                                       self.stud_ui.dateEdit_stud_birthday.date().toString(
+                                           'dd.MM.yyyy'),
+                                       self.stud_ui.lineEdit_stud_phone.text(),
+                                       gender,
+                                       self.stud_ui.lineEdit_stud_city.text(),
+                                       self.stud_ui.lineEdit_stud_einst.text(),
+                                       self.stud_ui.lineEdit_stud_mail.text(),
+                                       self.stud_ui.lineEdit_stud_web.text())
+                _db.query(_sql)
+                _db.close()
+                self.load_db_students()
             elif type_post == "del":
                 for i in students_list:
                     if i.objectName() == 'vL_sAWContent_stud_list':
@@ -1888,6 +1872,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # Loader database for enrollment in decree
     def load_db_decree_enr(self):
         def setup_prog_info():
+            uncheck_clb()
             _db = ARMDataBase()
             selected_prog = self.decree_enr_ui.comboBox_prog.currentData()
             if selected_prog is not None:
@@ -1912,6 +1897,7 @@ class MainWindow(QtWidgets.QMainWindow):
             _db.close()
 
         def setup_group_info():
+            uncheck_clb()
             clear_list(self.decree_enr_ui.sAWContent_outlay_studs.children())
             selected_group = self.decree_enr_ui.comboBox_group.currentData()
             _db = ARMDataBase()
@@ -2011,7 +1997,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for head in headers:
             self.create_combo_box_el(self.decree_enr_ui.comboBox_manager_cpui, head[0],
                                      str(head[2]) + " | " + str(head[1]))
-            if "цпюи" in str(head[2]).lower():
+            if "цпюи" in str(head[2]).lower() and 'зав' in str(head[2]).lower():
                 self.decree_enr_ui.comboBox_manager_cpui.setCurrentIndex(
                     self.decree_enr_ui.comboBox_manager_cpui.findData(head[0]))
 
@@ -2304,7 +2290,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # comboBox for manager CPUI load
         for head in headers:
             self.create_combo_box_el(self.outlay_print_ui.comboBox_manager_cpui, head[0], str(head[2]) + " | " + str(head[1]))
-            if "цпюи" in str(head[2]).lower():
+            if "цпюи" in str(head[2]).lower() and 'зав' in str(head[2]).lower():
                 self.outlay_print_ui.comboBox_manager_cpui.setCurrentIndex(
                     self.outlay_print_ui.comboBox_manager_cpui.findData(head[0]))
 
@@ -2398,13 +2384,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         lab_studs = QtWidgets.QLabel(widget_calcbox)
         lab_studs.setObjectName("lab_studs_" + id_sub)
-        lab_studs.setText(self._translate("Outlay", "Слушатели: "))
+        lab_studs.setText(self._translate("Outlay", "Количество слушателей: "))
         gL_widget_calcbox.addWidget(lab_studs, 1, 0)
 
         check_auto = QtWidgets.QCheckBox(widget_calcbox)
         check_auto.setObjectName("check_auto_" + id_sub)
         check_auto.setChecked(True)
-        check_auto.setText(self._translate("Outlay", "Автоматически"))
+        check_auto.setText(self._translate("Outlay", "Автоматический расчет"))
         gL_widget_calcbox.addWidget(check_auto, 0, 2)
 
         spin_studs = QtWidgets.QSpinBox(widget_calcbox)
@@ -2419,7 +2405,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         lab_price = QtWidgets.QLabel(widget_calcbox)
         lab_price.setObjectName("lab_price_" + id_sub)
-        lab_price.setText(self._translate("Outlay", "Стоимость: "))
+        lab_price.setText(self._translate("Outlay", "Стоимость курса: "))
         gL_widget_calcbox.addWidget(lab_price, 2, 0)
 
         spin_price = QtWidgets.QSpinBox(widget_calcbox)
@@ -2435,7 +2421,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         lab_tax = QtWidgets.QLabel(widget_calcbox)
         lab_tax.setObjectName("lab_tax_" + id_sub)
-        lab_tax.setText(self._translate("Outlay", "Часовая стоимость: "))
+        lab_tax.setText(self._translate("Outlay", "Почасовая оплата: "))
         gL_widget_calcbox.addWidget(lab_tax, 3, 0)
 
         spin_tax = QtWidgets.QSpinBox(widget_calcbox)
@@ -2450,7 +2436,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         lab_hours = QtWidgets.QLabel(widget_calcbox)
         lab_hours.setObjectName("lab_hours_" + id_sub)
-        lab_hours.setText(self._translate("Outlay", "Часы: "))
+        lab_hours.setText(self._translate("Outlay", "Количество часов: "))
         gL_widget_calcbox.addWidget(lab_hours, 4, 0)
 
         spin_hours = QtWidgets.QSpinBox(widget_calcbox)
@@ -2558,32 +2544,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def load_calculate_values(self):
         i = 0
-        j = 0
         for widget_calcbox in self.outlay_ui.widget_calcs.children():
             if widget_calcbox.objectName().startswith("widget_calcbox_"):
-                if j < self.outlay_ui.calcs_before:
-                    j += 1
-                else:
-                    for child in widget_calcbox.children():
-                        if child.objectName().startswith("spin_studs_") \
-                                and self.outlay_ui.variability_list[i][0] != "":
-                            child.setValue(self.outlay_ui.variability_list[i][0])
-                        elif child.objectName().startswith("spin_price_") \
-                                and self.outlay_ui.variability_list[i][1] != "":
-                            child.setValue(self.outlay_ui.variability_list[i][1])
-                        elif child.objectName().startswith("spin_tax_") \
-                                and self.outlay_ui.variability_list[i][2] != "":
-                            child.setValue(self.outlay_ui.variability_list[i][2])
-                        elif child.objectName().startswith("spin_hours_") \
-                                and self.outlay_ui.variability_list[i][3] != "":
-                            child.setValue(self.outlay_ui.variability_list[i][3])
-                        elif self.outlay_ui.variability_list[i][4] in child.objectName() \
-                                and self.outlay_ui.variability_list[i][4] != "":
-                            child.setChecked(True)
-                        elif child.objectName().startswith("check_auto_") \
-                                and self.outlay_ui.variability_list[i][5] != "":
-                            child.setChecked(self.outlay_ui.variability_list[i][5])
-                    i += 1
+                for child in widget_calcbox.children():
+                    if child.objectName().startswith("spin_studs_") \
+                            and self.outlay_ui.variability_list[i][0] != "":
+                        child.setValue(self.outlay_ui.variability_list[i][0])
+                    elif child.objectName().startswith("spin_price_") \
+                            and self.outlay_ui.variability_list[i][1] != "":
+                        child.setValue(self.outlay_ui.variability_list[i][1])
+                    elif child.objectName().startswith("spin_tax_") \
+                            and self.outlay_ui.variability_list[i][2] != "":
+                        child.setValue(self.outlay_ui.variability_list[i][2])
+                    elif child.objectName().startswith("spin_hours_") \
+                            and self.outlay_ui.variability_list[i][3] != "":
+                        child.setValue(self.outlay_ui.variability_list[i][3])
+                    elif self.outlay_ui.variability_list[i][4] in child.objectName() \
+                            and self.outlay_ui.variability_list[i][4] != "":
+                        child.setChecked(True)
+                    elif child.objectName().startswith("check_auto_") \
+                            and self.outlay_ui.variability_list[i][5] != "":
+                        child.setChecked(self.outlay_ui.variability_list[i][5])
+                i += 1
         self.outlay_check_click()
 
     def calculate_values(self):
@@ -2858,7 +2840,11 @@ class MainWindow(QtWidgets.QMainWindow):
             pc.set_option('password', settings_win.lEdit_password.text())
             pc.set_option('mail', settings_win.lEdit_service.text())
             pc.set_option('sender', settings_win.lEdit_sender.text())
-            pc.set_option('path_for_save_letters', settings_win.lEdit_path.text())
+            path_for_save = settings_win.lEdit_path.text()
+            if path_for_save.endswith('/') or path_for_save.endswith('\\'):
+                pc.set_option('path_for_save_letters', settings_win.lEdit_path.text())
+            else:
+                pc.set_option('path_for_save_letters', settings_win.lEdit_path.text() + '/')
             pc.set_option('time_sleep', str(settings_win.spin_rate.value() * 60))
             set_win.close()
         set_win = QtWidgets.QDialog(self)
@@ -3247,7 +3233,7 @@ def create_outlay_doc(outlay_data):
     plan_profit = doc.add_table(rows=2 + outlay_data[4]['count'], cols=4, style='Table Grid')
     plan_profit.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    add_cell(f"предмет",
+    add_cell(f"Предмет",
              plan_profit.cell(0, 0), plan_profit.rows[0], 4.25, 1.31, font_size=12)
     add_cell(f"Стоимость, руб.",
              plan_profit.cell(0, 1), plan_profit.rows[0], 4.25, 1.31, font_size=12)
@@ -3312,11 +3298,11 @@ def create_outlay_doc(outlay_data):
 
     add_cell(" ", payment_for_hours.cell(0, 0), payment_for_hours.rows[0], 3.53, 0.93, font_size=12)
     add_cell("ФИО", payment_for_hours.cell(0, 1), payment_for_hours.rows[0], 4.0, 0.93, font_size=12)
-    add_cell("ауд. занятия", payment_for_hours.cell(0, 2), payment_for_hours.rows[0], 2.25, 0.93, font_size=12)
-    add_cell("Всего час", payment_for_hours.cell(0, 3), payment_for_hours.rows[0], 1.75, 0.93, font_size=12)
-    add_cell("Стоимость 1 ч. руб.", payment_for_hours.cell(0, 4), payment_for_hours.rows[0], 3, 0.93, font_size=12)
+    add_cell("Ауд. занятия, час.", payment_for_hours.cell(0, 2), payment_for_hours.rows[0], 2.25, 0.93, font_size=12)
+    add_cell("Всего, час", payment_for_hours.cell(0, 3), payment_for_hours.rows[0], 1.75, 0.93, font_size=12)
+    add_cell("Стоимость 1 час., руб.", payment_for_hours.cell(0, 4), payment_for_hours.rows[0], 3, 0.93, font_size=12)
     add_cell("Сумма, руб.", payment_for_hours.cell(0, 5), payment_for_hours.rows[0], 2.75, 0.93, font_size=12)
-    add_cell("Начисления на оплату труда, %", payment_for_hours.cell(0, 6), payment_for_hours.rows[0],
+    add_cell("Начисление на оплату труда, %", payment_for_hours.cell(0, 6), payment_for_hours.rows[0],
              3.5, 0.93, font_size=12)
     add_cell("Сумма, руб.", payment_for_hours.cell(0, 7), payment_for_hours.rows[0], 2.5, 0.93, font_size=12)
     add_cell("Всего, руб.", payment_for_hours.cell(0, 8), payment_for_hours.rows[0], 3, 0.93, font_size=12)
@@ -3412,6 +3398,7 @@ def create_outlay_doc(outlay_data):
     par = doc.add_paragraph(" ")
     par.runs[0].font.name = "Times New Roman"
     par.runs[0].font.size = docx.shared.Pt(14)
+    par.paragraph_format.space_after = docx.shared.Pt(0)
 
     tab_approve = doc.add_table(rows=3, cols=2)
 
@@ -3732,7 +3719,10 @@ class CheckNewMessage:
         while threading.main_thread().is_alive():
             try:
                 if pc.get_option('login') != "None" \
+                and pc.get_option('login') != "" \
+                and pc.get_option('sender') != "" \
                 and pc.get_option('password') != "None" \
+                and pc.get_option('password') != "" \
                 and pc.get_option('checking') != "0" \
                 and pc.get_option('sender') != "None":
                     check_new_message()
@@ -4205,6 +4195,8 @@ def set_cell_margins(cell: _Cell, **kwargs):
 def clear_list(children_list):
     for i in children_list:
         if i.objectName().startswith('clb_'):
+            i.setObjectName('deleteLater_this_clb')
+            i.deleteLater()
             i.setAttribute(55, 1)
             i.close()
 
