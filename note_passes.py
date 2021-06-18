@@ -131,7 +131,7 @@ class Ui_NotePasses(object):
         _translate = QtCore.QCoreApplication.translate
         NotePasses.setWindowTitle(_translate("NotePasses", "Редактор документа"))
         self.lab_head.setText(_translate("NotePasses", "Директор: "))
-        self.pushButton_save_doc.setText(_translate("NotePasses", "Сохранить служебку"))
+        self.pushButton_save_doc.setText(_translate("NotePasses", "Сохранить служебную записку"))
         self.pushButton_back.setText(_translate("NotePasses", "Назад"))
         self.lab_prog.setText(_translate("NotePasses", "Программа: "))
         self.lab_group.setText(_translate("NotePasses", "Группа: "))

@@ -36,6 +36,7 @@ from outlay_printer_ui import *
 from decree_enrollment import *
 from note_passes import *
 from note_passwords import *
+from note_studs_list import *
 from docx_creator_ui import *
 from settings_ui import *
 # My DataBase controller
@@ -123,6 +124,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.note_passwords_ui = Ui_NotePasswords()
         self.note_passwords_ui.setupUi(self.docx_ui.widget_notepasswords)
 
+        self.docx_ui.widget_notelist = QtWidgets.QWidget()
+        self.docx_ui.not_main.addWidget(self.docx_ui.widget_notelist)
+        self.note_list_ui = Ui_NoteList()
+        self.note_list_ui.setupUi(self.docx_ui.widget_notelist)
+
         self.disk_dir = os.getenv("SystemDrive")
         self.user = os.environ.get("USERNAME")
         self.dir = os.path.abspath(os.curdir)
@@ -175,23 +181,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.widget_enrollment.show()
         self.load_db_enrollment()
 
-    # Func for edit database table Enrollment
+    # Func for create decree enrollment docx
     def decree_enr_win(self):
         self.docx_ui.widget_main.hide()
         self.docx_ui.widget_enrollment.show()
         self.load_db_decree_enr()
 
-    # Func for edit database table Enrollment
+    # Func for create note passes docx
     def note_passes_win(self):
         self.docx_ui.widget_main.hide()
         self.docx_ui.widget_notepasses.show()
         self.load_db_note_passes()
 
-    # Func for edit database table Enrollment
+    # Func for create note passwords docx
     def note_passwords_win(self):
         self.docx_ui.widget_main.hide()
         self.docx_ui.widget_notepasswords.show()
         self.load_db_note_passwords()
+
+    # Func for create note list studs docx
+    def note_list_win(self):
+        self.docx_ui.widget_main.hide()
+        self.docx_ui.widget_notelist.show()
+        self.load_db_note_list()
 
     # Func for edit database table Outlay
     def outlay_win(self):
@@ -239,6 +251,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def note_passwords_back():
             self.docx_ui.widget_notepasswords.hide()
+            self.docx_ui.widget_main.show()
+
+        def note_list_back():
+            self.docx_ui.widget_notelist.hide()
             self.docx_ui.widget_main.show()
 
         def outlay_back():
@@ -1110,6 +1126,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.docx_ui.pushButton_decree_enrollment.clicked.connect(lambda: self.decree_enr_win())
         self.docx_ui.pushButton_note_passes.clicked.connect(lambda: self.note_passes_win())
         self.docx_ui.pushButton_note_passwords.clicked.connect(lambda: self.note_passwords_win())
+        self.docx_ui.pushButton_note_studs_list.clicked.connect(lambda: self.note_list_win())
 
         self.decree_enr_ui.pushButton_back.clicked.connect(lambda: decree_enr_back())
         self.decree_enr_ui.pushButton_save_doc.clicked.connect(lambda: self.create_decree_enr())
@@ -1119,6 +1136,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.note_passwords_ui.pushButton_back.clicked.connect(lambda: note_passwords_back())
         self.note_passwords_ui.pushButton_save_doc.clicked.connect(lambda: self.create_note_passwords())
+
+        self.note_list_ui.pushButton_back.clicked.connect(lambda: note_list_back())
+        self.note_list_ui.pushButton_save_doc.clicked.connect(lambda: self.create_note_list())
 
     # END BUTTONS
     def clear_for_start(self):
@@ -2041,7 +2061,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         _db.close()
 
-    # Loader database for enrollment in decree
+    # Loader database for passes in note
     def load_db_note_passes(self):
         def setup_prog_info():
             uncheck_clb()
@@ -2161,7 +2181,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         _db.close()
 
-    # Loader database for enrollment in decree
+    # Loader database for passwords in note
     def load_db_note_passwords(self):
         def setup_prog_info():
             uncheck_clb()
@@ -2282,6 +2302,19 @@ class MainWindow(QtWidgets.QMainWindow):
         # dateEdit for date note
         self.note_passwords_ui.dateEdit_date_before.setDate(datetime.datetime.today())
         self.note_passwords_ui.dateEdit_date.setDate(datetime.datetime.today())
+
+        _db.close()
+
+    # Loader database for list studs in note
+    def load_db_note_list(self):
+        clear_list(self.note_list_ui.sAWContent_groups.children())
+        _db = ARMDataBase()
+
+        # list for Groups load
+        _sql = "SELECT id_group, group_name FROM groups"
+        groups = _db.query(_sql)
+        for group in groups:
+            self.create_list_el('clb_group_' + str(group[0]), str(group[1]), self.note_list_ui.sAWContent_groups, auto_exclusive=False)
 
         _db.close()
 
@@ -2623,6 +2656,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.docx_ui.widget_enrollment.hide()
         self.docx_ui.widget_notepasses.hide()
         self.docx_ui.widget_notepasswords.hide()
+        self.docx_ui.widget_notelist.hide()
         self.docx_ui.widget_main.show()
         self.docx_creator.exec_()
 
@@ -3250,6 +3284,75 @@ class MainWindow(QtWidgets.QMainWindow):
         task.deamon = True
         task.start()
 
+    def create_note_list(self):
+        _db = ARMDataBase()
+        data = []
+        iterat = 0
+        for i in range(len(self.note_list_ui.sAWContent_groups.children())):
+            it = self.note_list_ui.sAWContent_groups.children()[i]
+            if it.objectName().startswith("clb_") and it.isChecked():
+                _sql = "SELECT id_group, group_name, id_prog, class FROM groups WHERE id_group=" + it.objectName().split("_")[-1]
+                groups_info = _db.query(_sql)[0]
+                _sql = "SELECT prog_name FROM programs WHERE id_prog=" + str(groups_info[2])
+                prog_name = _db.query(_sql)[0][0]
+                data.append([[], groups_info[1], groups_info[3], prog_name, self.note_list_ui.checkBox_and_prog.isChecked()])
+                _sql = "SELECT student_name, id_student FROM students WHERE id_group=" + str(groups_info[0])
+                studs_list = _db.query(_sql)
+                j = 0
+                for stud in studs_list:
+                    if self.note_list_ui.checkBox_and_prog.isChecked():
+                        _sql = "SELECT id_sub FROM subs_in_studs WHERE status=1 AND id_student=" + str(stud[1])
+                        sub_id = _db.query(_sql)
+                        studs_subs = []
+                        for id in sub_id:
+                            _sql = "SELECT sub_name FROM subjects WHERE id_sub=" + str(id[0])
+                            studs_subs.append(_db.query(_sql)[0][0])
+                        _subs = ''
+                        i1 = 1
+                        for subs in studs_subs:
+                            if i1 < len(sub_id):
+                                _subs += subs + ", "
+                            else:
+                                _subs += subs
+                            i1 += 1
+                        data[iterat][0].append([stud[0], _subs])
+                    else:
+                        data[iterat][0].append([stud[0]])
+                iterat += 1
+        _db.close()
+
+        path = os.getcwd() + r"/Документы/Записки/"
+        filename = f"Служебка списки №000000.docx"
+        desk_list_dir = os.listdir(path)
+        indexes_list = []
+        for doc_in_dir in desk_list_dir:
+            start_index = doc_in_dir.find('№')
+            if start_index:
+                try:
+                    indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+                except Exception:
+                    pass
+        copy_index = 0
+        while copy_index in indexes_list:
+            copy_index += 1
+            str_copy_index = str(copy_index)
+            while len(str_copy_index) < 6:
+                str_copy_index = "0" + str_copy_index
+            filename = f"Служебка списки №{str_copy_index}.docx"
+
+        self.docx_creator.close()
+        set_doc_warning("Отправлено",
+                        'Документ будет сохранен в служебные записки.\n'
+                        'Вы сможете найти его во вкладке "Документы"->"Служебные записки"\n'
+                        'Имя документа:\n' +
+                        filename)
+
+        thread_list = []
+        task = threading.Thread(target=NoteListCreate(), args=(data,))
+        thread_list.append(task)
+        task.deamon = True
+        task.start()
+
     def settings_window(self, war_icon=":/sfu_logo.ico"):
         def save_settings():
             pc.set_option('checking', str(int(settings_win.check_mail.isChecked())))
@@ -3303,6 +3406,11 @@ class NotePassesCreate:
 class NotePasswordCreate:
     def __call__(self, data):
         create_note_password_doc(data)
+
+
+class NoteListCreate:
+    def __call__(self, data):
+        create_note_list_doc(data)
 
 
 def create_outlay_doc(outlay_data):
@@ -4359,6 +4467,91 @@ def create_note_password_doc(data):
         tab_manager_cpui.rows[0],
         10.44, 1.4, text_alignment=WD_ALIGN_PARAGRAPH.RIGHT
     )
+
+    # SETTINGS FOR DOCX
+    properties = doc.core_properties
+    properties.author = "ЦПЮИ ХТИ"
+    # DOCX SAVE
+    doc.save(path + filename)
+    return path, filename
+
+
+def create_note_list_doc(data):
+    path = os.getcwd() + r"/Документы/Записки/"
+    filename = f"Служебка списки №000000.docx"
+    desk_list_dir = os.listdir(path)
+    indexes_list = []
+    for doc_in_dir in desk_list_dir:
+        start_index = doc_in_dir.find('№')
+        if start_index:
+            try:
+                indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+            except Exception:
+                pass
+    copy_index = 0
+    while copy_index in indexes_list:
+        copy_index += 1
+        str_copy_index = str(copy_index)
+        while len(str_copy_index) < 6:
+            str_copy_index = "0" + str_copy_index
+        filename = f"Служебка списки №{str_copy_index}.docx"
+
+    doc = docx.Document()
+
+    # START DOC / FIRST PAGE
+
+    doc.sections[0].page_height = docx.shared.Cm(29.7)
+    doc.sections[0].page_width = docx.shared.Cm(21)
+    doc.sections[0].top_margin = docx.shared.Cm(2)
+    doc.sections[0].right_margin = docx.shared.Cm(1.5)
+    doc.sections[0].left_margin = docx.shared.Cm(3)
+    doc.sections[0].bottom_margin = docx.shared.Cm(2)
+
+    # HEADER
+    add_par(
+        doc,
+        "СПИСКИ ОБУЧАЮЩИХСЯ",
+        text_aligment=WD_ALIGN_PARAGRAPH.CENTER,
+        bold=True,
+        font_size=14
+    )
+    add_par(
+        doc,
+        " ",
+        text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+        font_size=14
+    )
+
+    for group in data:
+        add_par(
+            doc,
+            f"Группа: {group[1]}:",
+            text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+            space_after=10,
+            font_size=14
+        )
+
+        studs = []
+        for i in range(len(group[0])):
+            studs.append(group[0][i])
+        try:
+            studs.sort(key=lambda x: x[0])
+        except IndexError:
+            pass
+
+        for i in range(len(studs)):
+            try:
+                add_par(
+                    doc,
+                    f"{str(i + 1)}. {studs[i][0]} ({studs[i][1]});" if group[4] else f"{str(i + 1)}. {studs[i][0]};",
+                    first_line_indent=1.25,
+                    text_aligment=WD_ALIGN_PARAGRAPH.LEFT,
+                    font_size=14
+                )
+            except IndexError:
+                pass
+        doc.paragraphs[-1].runs[0].text = doc.paragraphs[-1].runs[0].text.replace(";", ".")
+        add_par(doc, " ", line_spacing_rule=WD_LINE_SPACING.SINGLE, font_size=14)
 
     # SETTINGS FOR DOCX
     properties = doc.core_properties

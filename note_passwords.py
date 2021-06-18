@@ -123,7 +123,7 @@ class Ui_NotePasswords(object):
         _translate = QtCore.QCoreApplication.translate
         NotePasswords.setWindowTitle(_translate("NotePasswords", "Редактор документа"))
         self.lab_head.setText(_translate("NotePasswords", "Руководитель департамента ИТ: "))
-        self.pushButton_save_doc.setText(_translate("NotePasswords", "Сохранить служебку"))
+        self.pushButton_save_doc.setText(_translate("NotePasswords", "Сохранить служебную записку"))
         self.pushButton_back.setText(_translate("NotePasswords", "Назад"))
         self.lab_prog.setText(_translate("NotePasswords", "Программа: "))
         self.lab_group.setText(_translate("NotePasswords", "Группа: "))
