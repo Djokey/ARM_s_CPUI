@@ -396,6 +396,24 @@ class Ui_MainWindow(object):
         self.scrollArea_ttable.setWidget(self.sAWContent_ttable)
         self.vL_tab_ttable.addWidget(self.scrollArea_ttable)
 
+        # TAB ttable
+        self.tab_contracts = QtWidgets.QWidget(self.tabWidget_docx)
+        self.tab_contracts.setObjectName("tab_contracts")
+        self.vL_tab_contracts = QtWidgets.QVBoxLayout(self.tab_contracts)
+        self.vL_tab_contracts.setObjectName("vL_tab_contracts")
+        self.tabWidget_docx.addTab(self.tab_contracts, "")
+
+        self.scrollArea_contracts = QtWidgets.QScrollArea(self.widget_docx)
+        self.scrollArea_contracts.setWidgetResizable(True)
+        self.scrollArea_contracts.setObjectName("scrollArea_contracts")
+        self.sAWContent_contracts = QtWidgets.QWidget(self.tab_contracts)
+        self.sAWContent_contracts.setGeometry(QtCore.QRect(0, 0, 858, 372))
+        self.sAWContent_contracts.setObjectName("sAWContent_contracts")
+        self.vL_sAWContent_contracts = QtWidgets.QVBoxLayout(self.sAWContent_contracts)
+        self.vL_sAWContent_contracts.setObjectName("vL_sAWContent_contracts")
+        self.scrollArea_contracts.setWidget(self.sAWContent_contracts)
+        self.vL_tab_contracts.addWidget(self.scrollArea_contracts)
+
         # Main setups
         self.vL_widget_Main.addWidget(self.tabWidget_Main)
         self.hL_mainwidget.addWidget(self.widget_Main)
@@ -456,5 +474,6 @@ class Ui_MainWindow(object):
         self.tabWidget_docx.setTabText(self.tabWidget_docx.indexOf(self.tab_notes), _translate("MainWindow", "Служебные записки"))
         self.tabWidget_docx.setTabText(self.tabWidget_docx.indexOf(self.tab_outlay), _translate("MainWindow", "Сметы"))
         self.tabWidget_docx.setTabText(self.tabWidget_docx.indexOf(self.tab_ttable), _translate("MainWindow", "Расписания"))
+        self.tabWidget_docx.setTabText(self.tabWidget_docx.indexOf(self.tab_contracts), _translate("MainWindow", "Договора"))
         self.menu.setTitle(_translate("MainWindow", "Настройки"))
         self.settings.setText(_translate("MainWindow", "Почта"))

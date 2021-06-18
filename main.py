@@ -20,6 +20,7 @@ from docx.oxml.ns import qn
 from docx.table import _Cell
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE
 from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
+from docxtpl import DocxTemplate
 
 # My UI includes
 from ui import *
@@ -37,6 +38,7 @@ from decree_enrollment import *
 from note_passes import *
 from note_passwords import *
 from note_studs_list import *
+from contract_ui import *
 from docx_creator_ui import *
 from settings_ui import *
 # My DataBase controller
@@ -129,6 +131,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.note_list_ui = Ui_NoteList()
         self.note_list_ui.setupUi(self.docx_ui.widget_notelist)
 
+        self.docx_ui.widget_contract = QtWidgets.QWidget()
+        self.docx_ui.not_main.addWidget(self.docx_ui.widget_contract)
+        self.contract_ui = Ui_Contract()
+        self.contract_ui.setupUi(self.docx_ui.widget_contract)
+
         self.disk_dir = os.getenv("SystemDrive")
         self.user = os.environ.get("USERNAME")
         self.dir = os.path.abspath(os.curdir)
@@ -205,6 +212,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.docx_ui.widget_notelist.show()
         self.load_db_note_list()
 
+    # Func for create contract docxs
+    def contract_win(self):
+        self.docx_ui.widget_main.hide()
+        self.docx_ui.widget_contract.show()
+        self.load_db_contract()
+
     # Func for edit database table Outlay
     def outlay_win(self):
         self.ui.widget_roster.hide()
@@ -255,6 +268,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def note_list_back():
             self.docx_ui.widget_notelist.hide()
+            self.docx_ui.widget_main.show()
+
+        def contract_back():
+            self.docx_ui.widget_contract.hide()
             self.docx_ui.widget_main.show()
 
         def outlay_back():
@@ -1033,6 +1050,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 docx_folder = r'Расписания'
             elif "outlay" in current_tab.objectName():
                 docx_folder = r'Сметы'
+            elif "contracts" in current_tab.objectName():
+                docx_folder = r'Договора'
             for clb in content_list:
                 if clb.objectName().startswith("clb_") and clb.isChecked():
                     command = f'"{os.path.abspath(os.curdir)}\\Документы\\{docx_folder}\\{clb.text()}.docx"'
@@ -1127,6 +1146,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.docx_ui.pushButton_note_passes.clicked.connect(lambda: self.note_passes_win())
         self.docx_ui.pushButton_note_passwords.clicked.connect(lambda: self.note_passwords_win())
         self.docx_ui.pushButton_note_studs_list.clicked.connect(lambda: self.note_list_win())
+        self.docx_ui.pushButton_contract.clicked.connect(lambda: self.contract_win())
 
         self.decree_enr_ui.pushButton_back.clicked.connect(lambda: decree_enr_back())
         self.decree_enr_ui.pushButton_save_doc.clicked.connect(lambda: self.create_decree_enr())
@@ -1139,6 +1159,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.note_list_ui.pushButton_back.clicked.connect(lambda: note_list_back())
         self.note_list_ui.pushButton_save_doc.clicked.connect(lambda: self.create_note_list())
+
+        self.contract_ui.pushButton_back.clicked.connect(lambda: contract_back())
+        self.contract_ui.pushButton_save_doc.clicked.connect(lambda: self.create_contract())
 
     # END BUTTONS
     def clear_for_start(self):
@@ -1157,9 +1180,11 @@ class MainWindow(QtWidgets.QMainWindow):
         clear_list(self.ui.sAWContent_outlay.children())
         clear_list(self.ui.sAWContent_notes.children())
         clear_list(self.ui.sAWContent_ttable.children())
+        clear_list(self.ui.sAWContent_contracts.children())
         list_docx = [['decree', self.ui.sAWContent_decree, 'Приказы'],
                      ['notes', self.ui.sAWContent_notes, 'Записки'],
                      ['ttable', self.ui.sAWContent_ttable, 'Расписания'],
+                     ['contacts', self.ui.sAWContent_contracts, 'Договора'],
                      ['outlay', self.ui.sAWContent_outlay, 'Сметы']]
         for docxs in list_docx:
             list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + docxs[2])
@@ -2314,7 +2339,102 @@ class MainWindow(QtWidgets.QMainWindow):
         _sql = "SELECT id_group, group_name FROM groups"
         groups = _db.query(_sql)
         for group in groups:
-            self.create_list_el('clb_group_' + str(group[0]), str(group[1]), self.note_list_ui.sAWContent_groups, auto_exclusive=False)
+            if str(group[0]) != '1':
+                self.create_list_el('clb_group_' + str(group[0]), str(group[1]), self.note_list_ui.sAWContent_groups, auto_exclusive=False)
+
+        _db.close()
+
+    # Loader database for contract docxs
+    def load_db_contract(self):
+        def setup_prog_info():
+            clear_list(self.contract_ui.sAWContent_subs.children())
+            _db = ARMDataBase()
+            selected_prog = self.contract_ui.comboBox_prog.currentData()
+            if selected_prog is not None and selected_prog != 8:
+                _sql = "SELECT prog_range_dates FROM programs WHERE id_prog=" + \
+                       str(self.contract_ui.comboBox_prog.currentData())
+                dates = _db.query(_sql)[0][0].split("|")
+                self.contract_ui.dateEdit_date_start.setDate(datetime.date(int(dates[0].split('.')[2]),
+                                                                             int(dates[0].split('.')[1]),
+                                                                             int(dates[0].split('.')[0])))
+                self.contract_ui.dateEdit_date_end.setDate(datetime.date(int(dates[1].split('.')[2]),
+                                                                           int(dates[1].split('.')[1]),
+                                                                           int(dates[1].split('.')[0])))
+
+                if str(self.contract_ui.comboBox_prog.currentData()) != "8":
+                    _sql = "SELECT id_sub, sub_name FROM subjects WHERE id_prog=" + \
+                           str(self.contract_ui.comboBox_prog.currentData())
+                    subs = _db.query(_sql)
+                    for sub in subs:
+                        _sql = "SELECT id_teacher FROM subjects WHERE id_sub=" + str(sub[0])
+                        id_teacher = _db.query(_sql)[0][0]
+                        _sql = "SELECT teacher_name FROM teachers WHERE id_teacher=" + str(id_teacher)
+                        teacher = _db.query(_sql)[0][0]
+                        self.create_list_el(
+                            'clb_sub_' + str(sub[0]),
+                            f"{str(sub[1])} ({teacher})",
+                            self.contract_ui.sAWContent_subs,
+                            auto_exclusive=False
+                        )
+
+            _db.close()
+
+        _db = ARMDataBase()
+
+        clear_list(self.contract_ui.sAWContent_subs.children())
+        self.contract_ui.comboBox_prog.clear()
+        self.contract_ui.comboBox_manager_cpui.clear()
+        self.contract_ui.comboBox_head.clear()
+        self.contract_ui.comboBox_head_ls.clear()
+
+        # comboBox for Head load
+        _sql = "SELECT id_head, head_name, head_prof FROM headers"
+        headers = _db.query(_sql)
+        for head in headers:
+            self.create_combo_box_el(self.contract_ui.comboBox_head, head[0], str(head[2]) + " | " + str(head[1]))
+            if "директор хти" in str(head[2]).lower():
+                self.contract_ui.comboBox_head.setCurrentIndex(
+                    self.contract_ui.comboBox_head.findData(head[0]))
+
+        # comboBox for Programs load
+        _sql = "SELECT id_prog, prog_name, prog_range_dates FROM programs"
+        programs = _db.query(_sql)
+        for prog in programs:
+            self.create_combo_box_el(self.contract_ui.comboBox_prog, prog[0], str(prog[1]))
+        self.contract_ui.comboBox_prog.currentIndexChanged.connect(lambda: setup_prog_info())
+
+        # comboBox for manager CPUI load
+        for head in headers:
+            self.create_combo_box_el(self.contract_ui.comboBox_manager_cpui, head[0],
+                                     str(head[2]) + " | " + str(head[1]))
+            if "цпюи" in str(head[2]).lower() and 'зав' in str(head[2]).lower():
+                self.contract_ui.comboBox_manager_cpui.setCurrentIndex(
+                    self.contract_ui.comboBox_manager_cpui.findData(head[0]))
+
+        # comboBox for manager Legal Sector load
+        for head in headers:
+            self.create_combo_box_el(self.contract_ui.comboBox_head_ls, head[0],
+                                     str(head[2]) + " | " + str(head[1]))
+            if "правов" in str(head[2]).lower() and 'зав' in str(head[2]).lower() and 'сектор' in str(head[2]).lower():
+                self.contract_ui.comboBox_head_ls.setCurrentIndex(
+                    self.contract_ui.comboBox_head_ls.findData(head[0]))
+
+        # list for Subjects load
+        if str(self.contract_ui.comboBox_prog.currentData()) != "8":
+            _sql = "SELECT id_sub, sub_name FROM subjects WHERE id_prog=" + \
+                   str(self.contract_ui.comboBox_prog.currentData())
+            subs = _db.query(_sql)
+            for sub in subs:
+                _sql = "SELECT id_teacher FROM subjects WHERE id_sub=" + str(sub[0])
+                id_teacher = _db.query(_sql)[0][0]
+                _sql = "SELECT teacher_name FROM teachers WHERE id_teacher=" + str(id_teacher)
+                teacher = _db.query(_sql)[0][0].split()[0]
+                self.create_list_el(
+                    'clb_sub_' + str(sub[0]),
+                    f"{str(sub[1])} ({teacher})",
+                    self.contract_ui.sAWContent_subs,
+                    auto_exclusive=False
+                )
 
         _db.close()
 
@@ -2657,6 +2777,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.docx_ui.widget_notepasses.hide()
         self.docx_ui.widget_notepasswords.hide()
         self.docx_ui.widget_notelist.hide()
+        self.docx_ui.widget_contract.hide()
         self.docx_ui.widget_main.show()
         self.docx_creator.exec_()
 
@@ -3353,6 +3474,89 @@ class MainWindow(QtWidgets.QMainWindow):
         task.deamon = True
         task.start()
 
+    def create_contract(self):
+        _db = ARMDataBase()
+        if str(self.contract_ui.comboBox_prog.currentData()) != 'None':
+            _sql = "SELECT prog_range FROM programs WHERE id_prog=" + str(self.contract_ui.comboBox_prog.currentData())
+            prog_range = _db.query(_sql)[0][0]
+        else:
+            prog_range = '4'
+        data = [
+            {
+            "head": self.contract_ui.comboBox_head.currentText(),
+            "program": self.contract_ui.comboBox_prog.currentText(),
+            "class": self.contract_ui.lEdit_class.text(),
+            "date_start": self.contract_ui.dateEdit_date_start.date().toString('dd.MM.yyyy'),
+            "date_end": self.contract_ui.dateEdit_date_end.date().toString('dd.MM.yyyy'),
+            "manager_cpui": self.contract_ui.comboBox_manager_cpui.currentText(),
+            "ls": self.contract_ui.comboBox_head_ls.currentText(),
+            "fullname": self.contract_ui.lEdit_fullname.text(),
+            "fullname_parent": self.contract_ui.lEdit_fullname_parent.text(),
+            "date_birthday": self.contract_ui.dateEdit_birthday.date().toString('dd.MM.yyyy'),
+            "passport_date": self.contract_ui.dateEdit_passport_date.date().toString('dd.MM.yyyy'),
+            "passport_parent_date": self.contract_ui.dateEdit_passport_parent_date.date().toString('dd.MM.yyyy'),
+            "male": self.contract_ui.radioButton_gender_male.isChecked(),
+            "address": self.contract_ui.lEdit_address.text(),
+            "phone": self.contract_ui.lEdit_phone.text(),
+            "phone_parent": self.contract_ui.lEdit_phone_parent.text(),
+            "mail": self.contract_ui.lEdit_mail.text(),
+            "mail_parent": self.contract_ui.lEdit_mail_parent.text(),
+            "uinst": self.contract_ui.lEdit_uinst.text(),
+            "passport_seria": self.contract_ui.lEdit_seria.text(),
+            "passport_number": self.contract_ui.lEdit_number.text(),
+            "passport_seria_parent": self.contract_ui.lEdit_seria_parent.text(),
+            "passport_number_parent": self.contract_ui.lEdit_number_parent.text(),
+            "passport_whom": self.contract_ui.lEdit_passport_whom.text(),
+            "passport_parent_whom": self.contract_ui.lEdit_passport_parent_whom.text(),
+            "prog_range": prog_range,
+            },
+            []
+        ]
+
+        for i in range(len(self.contract_ui.sAWContent_subs.children())):
+            it = self.contract_ui.sAWContent_subs.children()[i]
+            if it.objectName().startswith("clb_") and it.isChecked():
+                _sql = "SELECT id_sub, sub_name, sub_hours_need FROM subjects WHERE id_sub=" + it.objectName().split("_")[-1]
+                sub_info = _db.query(_sql)
+                j = 0
+                for sub in sub_info:
+                    data[1].append([sub[0], sub[1], sub[2]])
+
+        _db.close()
+
+        path = os.getcwd() + r"/Документы/Договора/"
+        filename = f"№000000"
+        desk_list_dir = os.listdir(path)
+        indexes_list = []
+        for doc_in_dir in desk_list_dir:
+            start_index = doc_in_dir.find('№')
+            if '№' in doc_in_dir:
+                try:
+                    if not doc_in_dir.startswith('~$'):
+                        indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+                except Exception:
+                    print('Exception')
+        copy_index = 0
+        while copy_index in indexes_list:
+            copy_index += 1
+            str_copy_index = str(copy_index)
+            while len(str_copy_index) < 6:
+                str_copy_index = "0" + str_copy_index
+            filename = f"№{str_copy_index}"
+
+        self.docx_creator.close()
+        set_doc_warning("Отправлено",
+                        'Документы будут сохранены в договора.\n'
+                        'Вы сможете найти их во вкладке "Документы"->"Договора"\n'
+                        'Номер документов:\n' +
+                        filename)
+
+        thread_list = []
+        task = threading.Thread(target=ContractCreate(), args=(data,))
+        thread_list.append(task)
+        task.deamon = True
+        task.start()
+
     def settings_window(self, war_icon=":/sfu_logo.ico"):
         def save_settings():
             pc.set_option('checking', str(int(settings_win.check_mail.isChecked())))
@@ -3411,6 +3615,11 @@ class NotePasswordCreate:
 class NoteListCreate:
     def __call__(self, data):
         create_note_list_doc(data)
+
+
+class ContractCreate:
+    def __call__(self, data):
+        create_contract(data)
 
 
 def create_outlay_doc(outlay_data):
@@ -4561,6 +4770,135 @@ def create_note_list_doc(data):
     return path, filename
 
 
+def create_contract(data):
+    path = os.getcwd() + r"/Документы/Договора/"
+    dir = os.getcwd()
+    filename = f"№000000"
+    desk_list_dir = os.listdir(path)
+    indexes_list = []
+    for doc_in_dir in desk_list_dir:
+        start_index = doc_in_dir.find('№')
+        if '№' in doc_in_dir:
+            try:
+                if not doc_in_dir.startswith('~$'):
+                    indexes_list.append(int(doc_in_dir[start_index + 1: start_index + 7]))
+            except Exception:
+                print('Exception')
+    copy_index = 0
+    while copy_index in indexes_list:
+        copy_index += 1
+        str_copy_index = str(copy_index)
+        while len(str_copy_index) < 6:
+            str_copy_index = "0" + str_copy_index
+        filename = f"№{str_copy_index}"
+
+    cla = ''
+    for i in range(len(data[1])):
+        if i + 1 < len(data[1]):
+            cla += f"по предмету {data[1][i][1].lower()} - {str(data[1][i][2])} часов ({str(int(int(data[1][i][2]) / 2))} занятий), "
+        else:
+            cla += f"по предмету {data[1][i][1].lower()} - {str(data[1][i][2])} часов ({str(int(int(data[1][i][2]) / 2))} занятий)."
+
+    doc = DocxTemplate(dir + "\\ШАБЛОНЫ\\Данные.docx")
+    context = {
+        'fullname': data[0]['fullname'],
+        'fullname_parent': data[0]['fullname_parent'],
+        'daybirth': data[0]['date_birthday'],
+        'gender': 'Мужской' if data[0]['male'] else 'Женский',
+        'address': data[0]['address'],
+        'phone': data[0]['phone'],
+        'phone_parent': data[0]['phone_parent'],
+        'mail': data[0]['mail'],
+        'mail_parent': data[0]['mail_parent'],
+        'uinst': data[0]['uinst'],
+        'passport_seria': data[0]['passport_seria'],
+        'passport_number': data[0]['passport_number'],
+        'passport_whom': data[0]['passport_whom'],
+        'passport_date': data[0]['passport_date'],
+        'passport_parent_date': data[0]['passport_parent_date'],
+        'psp': data[0]['passport_seria_parent'],
+        'pnp': data[0]['passport_number_parent'],
+        'passport_parent_whom': data[0]['passport_parent_whom'],
+        'cla': cla,
+    }
+
+    doc.render(context)
+    doc.save(path + filename + f" Данные {data[0]['fullname']}.docx")
+
+    doc = DocxTemplate(dir + "\\ШАБЛОНЫ\\Договор.docx")
+    context = {
+        'fullname': data[0]['fullname'],
+        'fullname_parent': data[0]['fullname_parent'],
+        'address': data[0]['address'],
+        'phone': data[0]['phone'],
+        'phone_par': data[0]['phone_parent'],
+        'seria_par': data[0]['passport_seria_parent'],
+        'passno_par': data[0]['passport_number_parent'],
+        'seria': data[0]['passport_seria'],
+        'passno': data[0]['passport_number'],
+        'who_par': data[0]['passport_parent_whom'],
+        'when_par': data[0]['passport_parent_date'],
+        'who': data[0]['passport_whom'],
+        'when': data[0]['passport_date'],
+        'prog_range': data[0]['prog_range'],
+        'date_end': data[0]['date_end'],
+        'date_start': data[0]['date_start'],
+        'prog_name': data[0]['program'],
+        'cla': cla,
+        'manager_cpui':
+            f"{data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+            f"{data[0]['manager_cpui'].split(' ')[-1][:1]}. "
+            f"{data[0]['manager_cpui'].split(' ')[-3]}",
+        'head':
+            f"{data[0]['head'].split(' ')[-2][:1]}. "
+            f"{data[0]['head'].split(' ')[-1][:1]}. "
+            f"{data[0]['head'].split(' ')[-3]}",
+        'ls':
+            f"{data[0]['ls'].split(' ')[-2][:1]}. "
+            f"{data[0]['ls'].split(' ')[-1][:1]}. "
+            f"{data[0]['ls'].split(' ')[-3]}",
+    }
+    doc.render(context)
+    doc.save(path + filename + f" Договор {data[0]['fullname']}.docx")
+
+    doc = DocxTemplate(dir + "\\ШАБЛОНЫ\\Заявление.docx")
+    context = {
+        'firstname': data[0]['fullname'],
+        'address': data[0]['address'],
+        'phone': data[0]['phone'],
+        'mail': data[0]['mail'],
+        'place': data[0]['uinst'],
+        'date_end': data[0]['date_end'],
+        'date_start': data[0]['date_start'],
+        'program': data[0]['program'],
+        'cla': cla,
+        'manager_cpui':
+            f"{data[0]['manager_cpui'].split(' ')[-2][:1]}. "
+            f"{data[0]['manager_cpui'].split(' ')[-1][:1]}. "
+            f"{data[0]['manager_cpui'].split(' ')[-3]}",
+        'head':
+            f"{data[0]['head'].split(' ')[-2][:1]}. "
+            f"{data[0]['head'].split(' ')[-1][:1]}. "
+            f"{data[0]['head'].split(' ')[-3]}",
+    }
+    doc.render(context)
+    doc.save(path + filename + f" Заявление {data[0]['fullname']}.docx")
+
+    doc = DocxTemplate(dir + "\\ШАБЛОНЫ\\Согласие на обработку персональных данных родителей.docx")
+    context = {
+        'firstname_pred': data[0]['fullname_parent'],
+        'address': data[0]['address'],
+        'seria_pred': data[0]['passport_seria'],
+        'passno_pred': data[0]['passport_number'],
+        'who_pred': data[0]['passport_parent_whom'],
+        'when_pred': data[0]['passport_parent_date'],
+    }
+    doc.render(context)
+    doc.save(path + filename + f" Согласие на обработку персональных данных родителей {data[0]['fullname']}.docx")
+
+    return path, filename
+
+
 def create_timetable(sub):
     thread_list = []
     task = threading.Thread(target=TimetableCreate(), args=(sub,))
@@ -4596,7 +4934,7 @@ class CheckNewMessage:
                 and pc.get_option('sender') != "None":
                     check_new_message()
             except Exception:
-                pass
+                print(f"Ошибка в вызове check_new_message()")
             t = 0
             while (t < 60 \
                    and threading.main_thread().is_alive()) \
@@ -4665,28 +5003,28 @@ def check_new_message():
                 f"{pc.get_option('path_for_save_letters')}{_folder}\\Договор {stud_name}.docx"
             )
         except FileNotFoundError:
-            pass
+            print(f"Ошибка в вызове os.rename() в set_name_doc()")
         try:
             os.rename(
                 f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление .docx",
                 f"{pc.get_option('path_for_save_letters')}{_folder}\\Заявление {stud_name}.docx"
             )
         except FileNotFoundError:
-            pass
+            print(f"Ошибка в вызове os.rename() в set_name_doc()")
         try:
             os.rename(
                 f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ .docx",
                 f"{pc.get_option('path_for_save_letters')}{_folder}\\СОГЛАСИЕ {stud_name}.docx"
             )
         except FileNotFoundError:
-            pass
+            print(f"Ошибка в вызове os.rename() в set_name_doc()")
         try:
             os.rename(
                 f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные .docx",
                 f"{pc.get_option('path_for_save_letters')}{_folder}\\Данные {stud_name}.docx"
             )
         except FileNotFoundError:
-            pass
+            print(f"Ошибка в вызове os.rename() в set_name_doc()")
         return stud_name
 
     mail = MailConnect()
@@ -4704,7 +5042,7 @@ def check_new_message():
                 f"{pc.get_option('path_for_save_letters')}{folder} {name_stud}"
             )
         except Exception:
-            pass
+            print(f"Ошибка в вызове os.rename() в check_new_message() в цикле 'for folder in folders:'")
 
 
 def open_file(command):
@@ -5160,6 +5498,8 @@ class MailConnect:
         raw_email = data[0][1]
         _email_message = email.message_from_bytes(raw_email)
         message_path = "000000"
+        if not os.path.exists(f"{pc.get_option('path_for_save_letters')}"):
+            os.mkdir(f"{pc.get_option('path_for_save_letters')}")
         folders = os.listdir(pc.get_option('path_for_save_letters'))
         for i in range(len(folders)):
             folders[i] = folders[i][:6]
@@ -5169,15 +5509,17 @@ class MailConnect:
             message_path = str(message_path)
             while len(message_path) < 6:
                 message_path = "0" + message_path
-        os.mkdir(f"{pc.get_option('path_for_save_letters')}{message_path}")
+        if not os.path.exists(f"{pc.get_option('path_for_save_letters')}{message_path}"):
+            os.mkdir(f"{pc.get_option('path_for_save_letters')}{message_path}")
         if _email_message.is_multipart():
             cpui_mail_files = 0
             for part in _email_message.walk():
                 filename = part.get_filename()
                 if filename:
                     cpui_mail_files += 1
-                    with open(f"{pc.get_option('path_for_save_letters')}{message_path}\\{str(cpui_mail_files)}.docx",
-                              'wb') as new_file:
+                    with open(
+                            f"{pc.get_option('path_for_save_letters')}{message_path}\\{str(cpui_mail_files)}.docx",
+                            'wb') as new_file:
                         new_file.write(part.get_payload(decode=True))
         return message_path
 
