@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_DocxCreator(object):
     def setupUi(self, DocxCreator):
         DocxCreator.setObjectName("DocxCreator")
-        DocxCreator.resize(1100, 800)
+        DocxCreator.resize(900, 700)
 
         self.not_main = QtWidgets.QVBoxLayout(DocxCreator)
         self.not_main.setObjectName("not_main")

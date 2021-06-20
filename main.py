@@ -292,6 +292,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 folder = 'Расписания'
             elif 'outlay' in current_tab.objectName():
                 folder = 'Сметы'
+            elif 'contracts' in current_tab.objectName():
+                folder = 'Договоры'
             for i in current_list:
                 if i.objectName().startswith('clb') and i.isChecked():
                     print_doc(os.path.abspath(os.curdir) + f'/Документы/{folder}/', i.text() + '.docx')
@@ -318,6 +320,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 folder = 'Расписания'
             elif 'outlay' in current_tab.objectName():
                 folder = 'Сметы'
+            elif 'contracts' in current_tab.objectName():
+                folder = 'Договоры'
             for i in current_list:
                 if i.objectName().startswith('clb') and i.isChecked():
                     os.remove(f'{os.path.abspath(os.curdir)}/Документы/{folder}/{i.text()}.docx')
@@ -1051,7 +1055,7 @@ class MainWindow(QtWidgets.QMainWindow):
             elif "outlay" in current_tab.objectName():
                 docx_folder = r'Сметы'
             elif "contracts" in current_tab.objectName():
-                docx_folder = r'Договора'
+                docx_folder = r'Договоры'
             for clb in content_list:
                 if clb.objectName().startswith("clb_") and clb.isChecked():
                     command = f'"{os.path.abspath(os.curdir)}\\Документы\\{docx_folder}\\{clb.text()}.docx"'
@@ -1184,7 +1188,7 @@ class MainWindow(QtWidgets.QMainWindow):
         list_docx = [['decree', self.ui.sAWContent_decree, 'Приказы'],
                      ['notes', self.ui.sAWContent_notes, 'Записки'],
                      ['ttable', self.ui.sAWContent_ttable, 'Расписания'],
-                     ['contacts', self.ui.sAWContent_contracts, 'Договора'],
+                     ['contacts', self.ui.sAWContent_contracts, 'Договоры'],
                      ['outlay', self.ui.sAWContent_outlay, 'Сметы']]
         for docxs in list_docx:
             list_dir = os.listdir(os.path.abspath(os.curdir) + r"/Документы/" + docxs[2])
@@ -3091,9 +3095,9 @@ class MainWindow(QtWidgets.QMainWindow):
             profit += price[j] * studs[j]
             cost += (hours[j] * tax[j]) * 1.302
         self.outlay_ui.label_profit.setText("Доходы = " + str(profit) + " рублей")
-        self.outlay_ui.label_cost.setText("Оплата часов + ФОТ = " + str(round(cost, 2)) + " рублей")
+        self.outlay_ui.label_cost.setText("ФОТ = " + str(round(cost, 2)) + " рублей")
         if profit != 0:
-            self.outlay_ui.label_otfot.setText("Оплата часов + ФОТ % = " + str(round(cost / profit * 100, 2)) + "%")
+            self.outlay_ui.label_otfot.setText("ФОТ % = " + str(round(cost / profit * 100, 2)) + "%")
 
     def outlay_check_click(self):
         for widget_calcbox in self.outlay_ui.widget_calcs.children():
@@ -3485,7 +3489,6 @@ class MainWindow(QtWidgets.QMainWindow):
             {
             "head": self.contract_ui.comboBox_head.currentText(),
             "program": self.contract_ui.comboBox_prog.currentText(),
-            "class": self.contract_ui.lEdit_class.text(),
             "date_start": self.contract_ui.dateEdit_date_start.date().toString('dd.MM.yyyy'),
             "date_end": self.contract_ui.dateEdit_date_end.date().toString('dd.MM.yyyy'),
             "manager_cpui": self.contract_ui.comboBox_manager_cpui.currentText(),
@@ -3524,7 +3527,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         _db.close()
 
-        path = os.getcwd() + r"/Документы/Договора/"
+        path = os.getcwd() + r"/Документы/Договоры/"
         filename = f"№000000"
         desk_list_dir = os.listdir(path)
         indexes_list = []
@@ -3546,8 +3549,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.docx_creator.close()
         set_doc_warning("Отправлено",
-                        'Документы будут сохранены в договора.\n'
-                        'Вы сможете найти их во вкладке "Документы"->"Договора"\n'
+                        'Документы будут сохранены в Договоры.\n'
+                        'Вы сможете найти их во вкладке "Документы"->"Договоры"\n'
                         'Номер документов:\n' +
                         filename)
 
@@ -3574,7 +3577,7 @@ class MainWindow(QtWidgets.QMainWindow):
         set_win = QtWidgets.QDialog(self)
         settings_win = Ui_Settings()
         settings_win.setupUi(set_win)
-        set_win.setWindowTitle('Settings')
+        set_win.setWindowTitle('Настройки почты')
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(war_icon), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         set_win.setWindowIcon(icon)
@@ -4771,7 +4774,7 @@ def create_note_list_doc(data):
 
 
 def create_contract(data):
-    path = os.getcwd() + r"/Документы/Договора/"
+    path = os.getcwd() + r"/Документы/Договоры/"
     dir = os.getcwd()
     filename = f"№000000"
     desk_list_dir = os.listdir(path)
@@ -5166,6 +5169,7 @@ def create_timetable_doc(_sub):
     doc.sections[-1].left_margin = docx.shared.Cm(1)
     doc.sections[-1].bottom_margin = docx.shared.Cm(1)
 
+
     doc.add_paragraph(group_name + " " + timetable[0][1])
     doc.paragraphs[0].runs[0].bold = True
     doc.paragraphs[0].runs[0].font.name = "Times New Roman"
@@ -5179,7 +5183,7 @@ def create_timetable_doc(_sub):
         tabs_c = int(tabs_c[0])
 
     if len(parse_timetable) - (22 * (tabs_c - 1)) <= 10:
-        len_date = 27
+        len_date = 28
     else:
         len_date = 22
 

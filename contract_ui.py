@@ -9,9 +9,9 @@ class Ui_Contract(object):
         self.vL_main = QtWidgets.QVBoxLayout(Contract)
         self.vL_main.setObjectName("vL_main")
 
-        self.checkBox_add_new_stud = QtWidgets.QCheckBox(Contract)
-        self.checkBox_add_new_stud.setObjectName("checkBox_add_new_stud")
-        self.vL_main.addWidget(self.checkBox_add_new_stud)
+        # self.checkBox_add_new_stud = QtWidgets.QCheckBox(Contract)
+        # self.checkBox_add_new_stud.setObjectName("checkBox_add_new_stud")
+        # self.vL_main.addWidget(self.checkBox_add_new_stud)
 
         self.widget_head = QtWidgets.QWidget(Contract)
         self.widget_head.setObjectName("widget_head")
@@ -69,14 +69,6 @@ class Ui_Contract(object):
         self.comboBox_prog = QtWidgets.QComboBox(Contract)
         self.comboBox_prog.setObjectName("comboBox_prog")
         self.hL_widget_prog.addWidget(self.comboBox_prog)
-
-        self.lab_class = QtWidgets.QLabel(Contract)
-        self.lab_class.setObjectName("lab_class")
-        self.hL_widget_prog.addWidget(self.lab_class)
-
-        self.lEdit_class = QtWidgets.QLineEdit(Contract)
-        self.lEdit_class.setObjectName("lEdit_class")
-        self.hL_widget_prog.addWidget(self.lEdit_class)
 
         self.lab_date_start = QtWidgets.QLabel(Contract)
         self.lab_date_start.setObjectName("lab_date_start")
@@ -322,7 +314,6 @@ class Ui_Contract(object):
         self.pushButton_save_doc.setText(_translate("Contract", "Сохранить документы договора"))
         self.pushButton_back.setText(_translate("Contract", "Назад"))
         self.lab_prog.setText(_translate("Contract", "Программа: "))
-        self.lab_class.setText(_translate("Contract", "Класс (9, 10, 11): "))
         self.lab_birthday.setText(_translate("Contract", "Дата рождения: "))
         self.lab_passport_whom.setText(_translate("Contract", "Кем выдан паспорт обучающегося: "))
         self.lab_passport_parent_whom.setText(_translate("Contract", "Кем выдан паспорт представителя: "))
@@ -334,7 +325,7 @@ class Ui_Contract(object):
         self.lab_date_end.setText(_translate("Contract", "        по: "))
         self.lab_phone.setText(_translate("Contract", "Телефон: "))
         self.lab_phone_parent.setText(_translate("Contract", "Телефон представителя: "))
-        self.checkBox_add_new_stud.setText(_translate("Contract", "Сразу добавить обучающегося в реестр"))
+        # self.checkBox_add_new_stud.setText(_translate("Contract", "Сразу добавить обучающегося в реестр"))
         self.lab_mail.setText(_translate("Contract", "Электронная почта: "))
         self.lab_passport.setText(_translate("Contract", "Паспорт (серия, номер, дата выдачи): "))
         self.lab_passport_parent.setText(_translate("Contract", "Паспорт представителя (серия, номер, дата выдачи): "))
