@@ -344,7 +344,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 if i.objectName().startswith("clb_"):
                     if i.isChecked():
                         i_name = i.objectName().split("_")[-1]
-                        create_timetable(i_name)
+                        create_timetable(i_name, self.load_list)
                         _set_doc_warning = 0
                         break
                     else:
@@ -406,54 +406,38 @@ class MainWindow(QtWidgets.QMainWindow):
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
                                     '"Сохранить выбранную запись"')
                 else:
-                    if len(self.head_ui.textEdit_headers_fullname.toPlainText().split()) == 3:
-                        _db = ARMDataBase()
-                        _sql = "UPDATE headers SET " \
-                               "head_name = '{0}', " \
-                               "head_phone = '{1}', " \
-                               "head_mail = '{2}', " \
-                               "head_web = '{3}', " \
-                               "head_prof = '{4}' " \
-                               "WHERE id_head = '{5}'".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
-                                                              self.head_ui.textEdit_headers_phone.toPlainText(),
-                                                              self.head_ui.textEdit_headers_mail.toPlainText(),
-                                                              self.head_ui.textEdit_headers_web.toPlainText(),
-                                                              self.head_ui.textEdit_headers_prof.toPlainText(),
-                                                              headers_selected)
-                        _db.query(_sql)
-                        _db.close()
-                        self.load_db_headers()
-                    else:
-                        set_doc_warning("Ошибка (не правильный формат имени)",
-                                        'Необходимо ввести имя состоящее из 3-х частей:\n\n'
-                                        '"Иванов Иван Андреевич"\n'
-                                        '"Иванов И А"\n'
-                                        '"Иванов И. А."\n\n'
-                                        'Обязательно используйте пробелы!')
-            elif type_post == 'add':
-                if len(self.head_ui.textEdit_headers_fullname.toPlainText().split()) == 3:
                     _db = ARMDataBase()
-                    _sql = "INSERT INTO headers VALUES(" \
-                           "NULL," \
-                           "'{0}'," \
-                           "'{1}'," \
-                           "'{2}'," \
-                           "'{3}'," \
-                           "'{4}')".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
-                                           self.head_ui.textEdit_headers_phone.toPlainText(),
-                                           self.head_ui.textEdit_headers_mail.toPlainText(),
-                                           self.head_ui.textEdit_headers_web.toPlainText(),
-                                           self.head_ui.textEdit_headers_prof.toPlainText())
+                    _sql = "UPDATE headers SET " \
+                           "head_name = '{0}', " \
+                           "head_phone = '{1}', " \
+                           "head_mail = '{2}', " \
+                           "head_web = '{3}', " \
+                           "head_prof = '{4}' " \
+                           "WHERE id_head = '{5}'".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
+                                                          self.head_ui.textEdit_headers_phone.toPlainText(),
+                                                          self.head_ui.textEdit_headers_mail.toPlainText(),
+                                                          self.head_ui.textEdit_headers_web.toPlainText(),
+                                                          self.head_ui.textEdit_headers_prof.toPlainText(),
+                                                          headers_selected)
                     _db.query(_sql)
                     _db.close()
                     self.load_db_headers()
-                else:
-                    set_doc_warning("Ошибка (не правильный формат имени)",
-                                    'Необходимо ввести имя состоящее из 3-х частей:\n\n'
-                                    '"Иванов Иван Андреевич"\n'
-                                    '"Иванов И А"\n'
-                                    '"Иванов И. А."\n\n'
-                                    'Обязательно используйте пробелы!')
+            elif type_post == 'add':
+                _db = ARMDataBase()
+                _sql = "INSERT INTO headers VALUES(" \
+                       "NULL," \
+                       "'{0}'," \
+                       "'{1}'," \
+                       "'{2}'," \
+                       "'{3}'," \
+                       "'{4}')".format(self.head_ui.textEdit_headers_fullname.toPlainText(),
+                                       self.head_ui.textEdit_headers_phone.toPlainText(),
+                                       self.head_ui.textEdit_headers_mail.toPlainText(),
+                                       self.head_ui.textEdit_headers_web.toPlainText(),
+                                       self.head_ui.textEdit_headers_prof.toPlainText())
+                _db.query(_sql)
+                _db.close()
+                self.load_db_headers()
             elif type_post == "del":
                 for i in headers_list:
                     if i.objectName() == 'vL_sAWContent_headers_list':
@@ -583,54 +567,38 @@ class MainWindow(QtWidgets.QMainWindow):
                                     'чтобы выбрать ее, измените ее содержимое, а потом нажмите на кнопку '
                                     '"Сохранить выбранную запись"')
                 else:
-                    if len(self.teach_ui.textEdit_teachers_fullname.toPlainText()) == 3:
-                        _db = ARMDataBase()
-                        _sql = "UPDATE teachers SET " \
-                               "teacher_name = '{0}', " \
-                               "teacher_phone = '{1}', " \
-                               "teacher_mail = '{2}', " \
-                               "teacher_web = '{3}', " \
-                               "teacher_prof = '{4}' " \
-                               "WHERE id_teacher = '{5}'".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
-                                                               self.teach_ui.textEdit_teachers_phone.toPlainText(),
-                                                               self.teach_ui.textEdit_teachers_mail.toPlainText(),
-                                                               self.teach_ui.textEdit_teachers_web.toPlainText(),
-                                                               self.teach_ui.textEdit_teachers_prof.toPlainText(),
-                                                               teachers_selected)
-                        _db.query(_sql)
-                        _db.close()
-                        self.load_db_teachers()
-                    else:
-                        set_doc_warning("Ошибка (не правильный формат имени)",
-                                        'Необходимо ввести имя состоящее из 3-х частей:\n\n'
-                                        '"Иванов Иван Андреевич"\n'
-                                        '"Иванов И А"\n'
-                                        '"Иванов И. А."\n\n'
-                                        'Обязательно используйте пробелы!')
-            elif type_post == 'add':
-                if len(self.teach_ui.textEdit_teachers_fullname.toPlainText()) == 3:
                     _db = ARMDataBase()
-                    _sql = "INSERT INTO teachers VALUES(" \
-                           "NULL," \
-                           "'{0}'," \
-                           "'{1}'," \
-                           "'{2}'," \
-                           "'{3}'," \
-                           "'{4}')".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
-                                           self.teach_ui.textEdit_teachers_phone.toPlainText(),
-                                           self.teach_ui.textEdit_teachers_mail.toPlainText(),
-                                           self.teach_ui.textEdit_teachers_web.toPlainText(),
-                                           self.teach_ui.textEdit_teachers_prof.toPlainText())
+                    _sql = "UPDATE teachers SET " \
+                           "teacher_name = '{0}', " \
+                           "teacher_phone = '{1}', " \
+                           "teacher_mail = '{2}', " \
+                           "teacher_web = '{3}', " \
+                           "teacher_prof = '{4}' " \
+                           "WHERE id_teacher = '{5}'".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
+                                                           self.teach_ui.textEdit_teachers_phone.toPlainText(),
+                                                           self.teach_ui.textEdit_teachers_mail.toPlainText(),
+                                                           self.teach_ui.textEdit_teachers_web.toPlainText(),
+                                                           self.teach_ui.textEdit_teachers_prof.toPlainText(),
+                                                           teachers_selected)
                     _db.query(_sql)
                     _db.close()
                     self.load_db_teachers()
-                else:
-                    set_doc_warning("Ошибка (не правильный формат имени)",
-                                    'Необходимо ввести имя состоящее из 3-х частей:\n\n'
-                                    '"Иванов Иван Андреевич"\n'
-                                    '"Иванов И А"\n'
-                                    '"Иванов И. А."\n\n'
-                                    'Обязательно используйте пробелы!')
+            elif type_post == 'add':
+                _db = ARMDataBase()
+                _sql = "INSERT INTO teachers VALUES(" \
+                       "NULL," \
+                       "'{0}'," \
+                       "'{1}'," \
+                       "'{2}'," \
+                       "'{3}'," \
+                       "'{4}')".format(self.teach_ui.textEdit_teachers_fullname.toPlainText(),
+                                       self.teach_ui.textEdit_teachers_phone.toPlainText(),
+                                       self.teach_ui.textEdit_teachers_mail.toPlainText(),
+                                       self.teach_ui.textEdit_teachers_web.toPlainText(),
+                                       self.teach_ui.textEdit_teachers_prof.toPlainText())
+                _db.query(_sql)
+                _db.close()
+                self.load_db_teachers()
             elif type_post == "del":
                 for i in teachers_list:
                     if i.objectName() == 'vL_sAWContent_teachers_list':
@@ -1340,6 +1308,12 @@ class MainWindow(QtWidgets.QMainWindow):
         _sql = "SELECT * FROM headers"
         headers = _db.query(_sql)
         _db.close()
+
+        headers = sorted(
+            headers,
+            key=lambda x: x[0], reverse=True
+        )
+
         head_loader = []
         for i in range(len(headers)):
             heads = []
@@ -1407,6 +1381,12 @@ class MainWindow(QtWidgets.QMainWindow):
         _sql = "SELECT * FROM programs"
         programs = _db.query(_sql)
         _db.close()
+
+        programs = sorted(
+            programs,
+            key=lambda x: x[0], reverse=True
+        )
+
         prog_loader = []
         for i in range(len(programs)):
             progs = []
@@ -1482,6 +1462,12 @@ class MainWindow(QtWidgets.QMainWindow):
         _sql = "SELECT * FROM teachers"
         teachers = _db.query(_sql)
         _db.close()
+
+        teachers = sorted(
+            teachers,
+            key=lambda x: x[0], reverse=True
+        )
+
         teach_loader = []
         for i in range(len(teachers)):
             teachs = []
@@ -1547,6 +1533,11 @@ class MainWindow(QtWidgets.QMainWindow):
         _db = ARMDataBase()
         _sql = "SELECT * FROM groups"
         groups = _db.query(_sql)
+
+        groups = sorted(
+            groups,
+            key=lambda x: x[0], reverse=True
+        )
 
         for i in range(len(groups)):
             grps = []
@@ -1628,6 +1619,11 @@ class MainWindow(QtWidgets.QMainWindow):
         subjects = _db.query(_sql)
         _db.close()
         sub_loader = []
+
+        subjects = sorted(
+            subjects,
+            key=lambda x: x[0], reverse=True
+        )
 
         _db = ARMDataBase()
         for i in range(len(subjects)):
@@ -1737,6 +1733,11 @@ class MainWindow(QtWidgets.QMainWindow):
         _sql = "SELECT * FROM students"
         students = _db.query(_sql)
         _db.close()
+
+        students = sorted(
+            students,
+            key=lambda x: x[0], reverse=True
+        )
 
         _db = ARMDataBase()
         for i in range(len(students)):
@@ -1885,6 +1886,12 @@ class MainWindow(QtWidgets.QMainWindow):
         _db = ARMDataBase()
         _sql = "SELECT * FROM students"
         students = _db.query(_sql)
+
+        students = sorted(
+            students,
+            key=lambda x: x[0], reverse=True
+        )
+
         for i in range(len(students)):
             studs = []
             for h in students[i]:
@@ -2390,6 +2397,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.contract_ui.comboBox_manager_cpui.clear()
         self.contract_ui.comboBox_head.clear()
         self.contract_ui.comboBox_head_ls.clear()
+        self.contract_ui.comboBox_group.clear()
+
+        # comboBox for Group load
+        _sql = "SELECT id_group, group_name FROM groups"
+        groups = _db.query(_sql)
+        for group in groups:
+            self.create_combo_box_el(self.contract_ui.comboBox_group, group[0], str(group[1]))
 
         # comboBox for Head load
         _sql = "SELECT id_head, head_name, head_prof FROM headers"
@@ -3097,7 +3111,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.outlay_ui.label_profit.setText("Доходы = " + str(profit) + " рублей")
         self.outlay_ui.label_cost.setText("ФОТ = " + str(round(cost, 2)) + " рублей")
         if profit != 0:
-            self.outlay_ui.label_otfot.setText("ФОТ % = " + str(round(cost / profit * 100, 2)) + "%")
+            self.outlay_ui.label_otfot.setText("ФОТ к затратам % = " + str(round(cost / profit * 100, 2)) + "%")
 
     def outlay_check_click(self):
         for widget_calcbox in self.outlay_ui.widget_calcs.children():
@@ -3105,26 +3119,26 @@ class MainWindow(QtWidgets.QMainWindow):
                 for child in widget_calcbox.children():
                     if child.objectName().startswith("check_auto_") \
                             and child.isChecked():
-                        widget_calcbox.findChild(QtWidgets.QRadioButton,
-                                                 "radio_variability_tax_" + widget_calcbox.objectName().split("_")[
-                                                     -1]).setEnabled(True)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton,
-                                                 "radio_variability_price_" + widget_calcbox.objectName().split("_")[
-                                                     -1]).setEnabled(True)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton,
-                                                 "radio_variability_studs_" + widget_calcbox.objectName().split("_")[
-                                                     -1]).setEnabled(True)
+                        widget_calcbox.findChild(
+                            QtWidgets.QRadioButton,
+                            "radio_variability_tax_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
+                        widget_calcbox.findChild(
+                            QtWidgets.QRadioButton,
+                            "radio_variability_price_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
+                        widget_calcbox.findChild(
+                            QtWidgets.QRadioButton,
+                            "radio_variability_studs_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(True)
                     elif child.objectName().startswith("check_auto_") \
                             and not child.isChecked():
-                        widget_calcbox.findChild(QtWidgets.QRadioButton,
-                                                 "radio_variability_tax_" + widget_calcbox.objectName().split("_")[
-                                                     -1]).setEnabled(False)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton,
-                                                 "radio_variability_price_" + widget_calcbox.objectName().split("_")[
-                                                     -1]).setEnabled(False)
-                        widget_calcbox.findChild(QtWidgets.QRadioButton,
-                                                 "radio_variability_studs_" + widget_calcbox.objectName().split("_")[
-                                                     -1]).setEnabled(False)
+                        widget_calcbox.findChild(
+                            QtWidgets.QRadioButton,
+                            "radio_variability_tax_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
+                        widget_calcbox.findChild(
+                            QtWidgets.QRadioButton,
+                            "radio_variability_price_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
+                        widget_calcbox.findChild(
+                            QtWidgets.QRadioButton,
+                            "radio_variability_studs_" + widget_calcbox.objectName().split("_")[-1]).setEnabled(False)
 
     def create_outlay(self):
         rb = 0
@@ -3511,6 +3525,7 @@ class MainWindow(QtWidgets.QMainWindow):
             "passport_number_parent": self.contract_ui.lEdit_number_parent.text(),
             "passport_whom": self.contract_ui.lEdit_passport_whom.text(),
             "passport_parent_whom": self.contract_ui.lEdit_passport_parent_whom.text(),
+            "inn_parent": self.contract_ui.lEdit_inn_parent.text(),
             "prog_range": prog_range,
             },
             []
@@ -3524,6 +3539,51 @@ class MainWindow(QtWidgets.QMainWindow):
                 j = 0
                 for sub in sub_info:
                     data[1].append([sub[0], sub[1], sub[2]])
+
+        gender = "male" if self.contract_ui.radioButton_gender_male.isChecked() else "female"
+
+        if self.contract_ui.checkBox_add_new_stud.isChecked() \
+        and self.contract_ui.lEdit_fullname.text() != "" \
+        and self.contract_ui.comboBox_group.currentData() != "1":
+            _sql = "SELECT id_prog FROM groups WHERE id_group=" + str(self.contract_ui.comboBox_group.currentData())
+            prog_this_group = _db.query(_sql)[0][0]
+            if prog_this_group == self.contract_ui.comboBox_prog.currentData():
+                _sql = "INSERT INTO students VALUES(NULL, '{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}', '')".format(
+                    self.contract_ui.lEdit_fullname.text(),
+                    str(self.contract_ui.comboBox_group.currentData()),
+                    self.contract_ui.dateEdit_birthday.date().toString('dd.MM.yyyy'),
+                    self.contract_ui.lEdit_phone.text(),
+                    gender,
+                    self.contract_ui.lEdit_address.text(),
+                    self.contract_ui.lEdit_uinst.text(),
+                    self.contract_ui.lEdit_mail.text(),
+                )
+                _db.query(_sql)
+                _sql = "SELECT id_student FROM students WHERE student_name='{0}' " \
+                       "AND id_group='{1}' " \
+                       "AND student_birthday='{2}' " \
+                       "AND student_phone='{3}' " \
+                       "AND student_gender='{4}'" \
+                       "AND student_city='{5}'" \
+                       "AND student_einst='{6}'" \
+                       "AND student_mail='{7}'".format(
+                    self.contract_ui.lEdit_fullname.text(),
+                    str(self.contract_ui.comboBox_group.currentData()),
+                    self.contract_ui.dateEdit_birthday.date().toString('dd.MM.yyyy'),
+                    self.contract_ui.lEdit_phone.text(),
+                    gender,
+                    self.contract_ui.lEdit_address.text(),
+                    self.contract_ui.lEdit_uinst.text(),
+                    self.contract_ui.lEdit_mail.text(),
+                )
+                id_stud = _db.query(_sql)[0][0]
+                for sub in data[1]:
+                    sub[0]
+                    _sql = "INSERT INTO subs_in_studs VALUES(NULL, '{0}','{1}','0','01.01.2000','1')".format(
+                        str(id_stud),
+                        str(sub[0]),
+                    )
+                    _db.query(_sql)
 
         _db.close()
 
@@ -3838,85 +3898,63 @@ def create_outlay_doc(outlay_data):
     for i in range(outlay_data[4]["count"]):
         profit += outlay_data[i]["studs"] * outlay_data[i]["price"]
         cost += (outlay_data[i]["hours"] * outlay_data[i]["tax"]) * 1.302
-    if len(str(round(profit, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
+
     add_cell(" ", tab_outlay.cell(1, 0), tab_outlay.rows[1], 1.69, 0.53)
     add_cell("общий доход",
              tab_outlay.cell(1, 1), tab_outlay.rows[1], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
     add_cell(" ", tab_outlay.cell(1, 2), tab_outlay.rows[1], 4.26, 0.53)
-    add_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(1, 3), tab_outlay.rows[1], 2.6, 0.53,
+    add_cell(str(round(profit)) + ",00", tab_outlay.cell(1, 3), tab_outlay.rows[1], 2.6, 0.53,
              font_size=12)
 
     add_cell(" ", tab_outlay.cell(2, 0), tab_outlay.rows[2], 1.69, 0.53)
     add_cell("расходы, всего в том числе:",
              tab_outlay.cell(2, 1), tab_outlay.rows[2], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
     add_cell("100,00", tab_outlay.cell(2, 2), tab_outlay.rows[2], 4.26, 0.53, font_size=12)
-    add_cell(str(round(profit, 2)).replace(".", ",") + zero, tab_outlay.cell(2, 3), tab_outlay.rows[2], 2.6, 0.53,
+    add_cell(str(round(profit)) + ",00", tab_outlay.cell(2, 3), tab_outlay.rows[2], 2.6, 0.53,
              font_size=12)
 
     try:
         otfot = cost / profit * 100
     except ZeroDivisionError:
         otfot = 0.0
-    if len(str(round(otfot, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
+
     add_cell(" ", tab_outlay.cell(3, 0), tab_outlay.rows[3], 1.69, 0.53)
     add_cell("вознаграждение за образовательные услуги гражданско-правового характера и "
                 "начисление страховых взносов во внебюджетные фонды",
              tab_outlay.cell(3, 1), tab_outlay.rows[3], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    add_cell(str(round(otfot, 2)).replace(".", ",") + zero,
+    add_cell(str(round(otfot)) + ",00",
              tab_outlay.cell(3, 2), tab_outlay.rows[3], 4.26, 0.53, font_size=12)
-    if len(str(round(cost, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
-    add_cell(str(round(cost, 2)).replace(".", ",") + zero,
+    add_cell(str(round(cost)) + ",00",
              tab_outlay.cell(3, 3), tab_outlay.rows[3], 2.6, 0.53, font_size=12)
 
     public_service = 0.05 * profit
-    if len(str(round(public_service, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
+
     add_cell(" ", tab_outlay.cell(4, 0), tab_outlay.rows[4], 1.69, 0.53)
     add_cell("коммунальные услуги",
              tab_outlay.cell(4, 1), tab_outlay.rows[4], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
     add_cell("5,00", tab_outlay.cell(4, 2), tab_outlay.rows[4], 4.26, 0.53, font_size=12)
-    add_cell(str(round(public_service, 2)).replace(".", ",") + zero,
+    add_cell(str(round(public_service)) + ",00",
              tab_outlay.cell(4, 3), tab_outlay.rows[4], 2.6, 0.53, font_size=12)
 
     inst_cost = 0.18 * profit
-    if len(str(round(inst_cost, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
+
     add_cell(" ", tab_outlay.cell(5, 0), tab_outlay.rows[5], 1.69, 0.53)
     add_cell("общеинститутские расходы",
              tab_outlay.cell(5, 1), tab_outlay.rows[5], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
     add_cell("18,00", tab_outlay.cell(5, 2), tab_outlay.rows[5], 4.26, 0.53, font_size=12)
-    add_cell(str(round(inst_cost, 2)).replace(".", ",") + zero,
+    add_cell(str(round(inst_cost)) + ",00",
              tab_outlay.cell(5, 3), tab_outlay.rows[5], 2.6, 0.53, font_size=12)
 
     div_cost_ratio = 100.0 - otfot - 5.0 - 18.0
     div_cost = div_cost_ratio * profit / 100
-    if len(str(round(div_cost_ratio, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
+
     add_cell(" ", tab_outlay.cell(6, 0), tab_outlay.rows[6], 1.69, 0.53)
     add_cell("расходы подразделения",
              tab_outlay.cell(6, 1), tab_outlay.rows[6], 8.08, 0.53, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
-    add_cell(str(round(div_cost_ratio, 2)).replace(".", ",") + zero,
+    add_cell(str(round(div_cost_ratio)) + ",00",
              tab_outlay.cell(6, 2), tab_outlay.rows[6], 4.26, 0.53, font_size=12)
-    if len(str(round(div_cost, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
-    add_cell(str(round(div_cost, 2)).replace(".", ",") + zero,
+
+    add_cell(str(round(div_cost)) + ",00",
              tab_outlay.cell(6, 3), tab_outlay.rows[6], 2.6, 0.53, font_size=12)
 
     par = doc.add_paragraph(" ")
@@ -3999,23 +4037,16 @@ def create_outlay_doc(outlay_data):
 
     for row_sub in range(outlay_data[4]['count']):
         sub_profit = float(outlay_data[row_sub]['studs'] * outlay_data[row_sub]['price'])
-        if len(str(round(sub_profit, 2)).split(".")[-1]) < 2:
-            zero = "0"
-        else:
-            zero = ""
+
         add_cell(outlay_data[row_sub]['subject'],
                  plan_profit.cell(row_sub + 1, 0), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
         add_cell(str(outlay_data[row_sub]['price']),
                  plan_profit.cell(row_sub + 1, 1), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
         add_cell(str(outlay_data[row_sub]['studs']),
                  plan_profit.cell(row_sub + 1, 2), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
-        add_cell(str(round(sub_profit, 2)).replace(".", ",") + zero,
+        add_cell(str(round(sub_profit)) + ",00",
                  plan_profit.cell(row_sub + 1, 3), plan_profit.rows[row_sub + 1], 4.25, 0.45, font_size=12)
 
-    if len(str(round(profit, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
     add_cell("Итого",
              plan_profit.cell(outlay_data[4]['count'] + 1, 0), plan_profit.rows[outlay_data[4]['count'] + 1],
              4.25, 0.45, font_size=12)
@@ -4025,7 +4056,7 @@ def create_outlay_doc(outlay_data):
     add_cell(" ",
              plan_profit.cell(outlay_data[4]['count'] + 1, 2), plan_profit.rows[outlay_data[4]['count'] + 1],
              4.25, 0.45, font_size=12)
-    add_cell(str(round(profit, 2)).replace(".", ",") + zero,
+    add_cell(str(round(profit)) + ",00",
              plan_profit.cell(outlay_data[4]['count'] + 1, 3), plan_profit.rows[outlay_data[4]['count'] + 1],
              4.25, 0.45, font_size=12, bold=True)
 
@@ -4075,10 +4106,7 @@ def create_outlay_doc(outlay_data):
         tax = outlay_data[row_sub]['tax']
         hours = outlay_data[row_sub]['hours']
         price_before_ofot = float(hours * tax)
-        if len(str(round(price_before_ofot, 2)).split(".")[-1]) < 2:
-            zero = "0"
-        else:
-            zero = ""
+
         add_cell("Преподаватель", payment_for_hours.cell(row_sub + 2, 0), payment_for_hours.rows[row_sub + 2],
                  3.53, 0.45, font_size=12, text_alignment=WD_ALIGN_PARAGRAPH.LEFT)
         add_cell(teacher, payment_for_hours.cell(row_sub + 2, 1), payment_for_hours.rows[row_sub + 2],
@@ -4089,23 +4117,17 @@ def create_outlay_doc(outlay_data):
                  1.75, 0.45, font_size=12)
         add_cell(str(tax), payment_for_hours.cell(row_sub + 2, 4), payment_for_hours.rows[row_sub + 2],
                  3, 0.45, font_size=12)
-        add_cell(str(round(price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 5),
+        add_cell(str(round(price_before_ofot)) + ",00", payment_for_hours.cell(row_sub + 2, 5),
                  payment_for_hours.rows[row_sub + 2], 2.75, 0.45, font_size=12)
         add_cell("30,2", payment_for_hours.cell(row_sub + 2, 6), payment_for_hours.rows[row_sub + 2],
                  3.5, 0.45, font_size=12)
         price_ofot = float(price_before_ofot * 0.302)
-        if len(str(round(price_ofot, 2)).split(".")[-1]) < 2:
-            zero = "0"
-        else:
-            zero = ""
-        add_cell(str(round(price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 7),
+
+        add_cell(str(round(price_ofot)) + ",00", payment_for_hours.cell(row_sub + 2, 7),
                  payment_for_hours.rows[row_sub + 2], 2.5, 0.45, font_size=12)
         price_after_ofot = float(price_ofot + price_before_ofot)
-        if len(str(round(price_after_ofot, 2)).split(".")[-1]) < 2:
-            zero = "0"
-        else:
-            zero = ""
-        add_cell(str(round(price_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(row_sub + 2, 8),
+
+        add_cell(str(round(price_after_ofot)) + ",00", payment_for_hours.cell(row_sub + 2, 8),
                  payment_for_hours.rows[row_sub + 2], 3, 0.45, font_size=12)
 
     last_row = outlay_data[4]['count'] + 2
@@ -4119,26 +4141,17 @@ def create_outlay_doc(outlay_data):
     sum_price_before_ofot = 0.0
     for i in range(outlay_data[4]['count']):
         sum_price_before_ofot += float(outlay_data[i]['hours'] * outlay_data[i]['tax'])
-    if len(str(round(sum_price_before_ofot, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
-    add_cell(str(round(sum_price_before_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 5),
+
+    add_cell(str(round(sum_price_before_ofot)) + ",00", payment_for_hours.cell(last_row, 5),
              payment_for_hours.rows[last_row], 2.75, 0.45, font_size=12, bold=True)
     add_cell(" ", payment_for_hours.cell(last_row, 6), payment_for_hours.rows[last_row], 3.5, 0.45, font_size=12)
     sum_price_ofot = float(sum_price_before_ofot * 0.302)
-    if len(str(round(sum_price_ofot, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
-    add_cell(str(round(sum_price_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 7),
+
+    add_cell(str(round(sum_price_ofot)) + ",00", payment_for_hours.cell(last_row, 7),
              payment_for_hours.rows[last_row], 2.5, 0.45, font_size=12, bold=True)
     sum_after_ofot = float(sum_price_ofot + sum_price_before_ofot)
-    if len(str(round(sum_after_ofot, 2)).split(".")[-1]) < 2:
-        zero = "0"
-    else:
-        zero = ""
-    add_cell(str(round(sum_after_ofot, 2)).replace(".", ",") + zero, payment_for_hours.cell(last_row, 8),
+
+    add_cell(str(round(sum_after_ofot)) + ",00", payment_for_hours.cell(last_row, 8),
              payment_for_hours.rows[last_row], 3, 0.45, font_size=12, bold=True)
 
     # SECOND HEADERS
@@ -4822,6 +4835,7 @@ def create_contract(data):
         'psp': data[0]['passport_seria_parent'],
         'pnp': data[0]['passport_number_parent'],
         'passport_parent_whom': data[0]['passport_parent_whom'],
+        'inn_parent': data[0]['inn_parent'],
         'cla': cla,
     }
 
@@ -4847,6 +4861,7 @@ def create_contract(data):
         'date_end': data[0]['date_end'],
         'date_start': data[0]['date_start'],
         'prog_name': data[0]['program'],
+        'inn_parent': data[0]['inn_parent'],
         'cla': cla,
         'manager_cpui':
             f"{data[0]['manager_cpui'].split(' ')[-2][:1]}. "
@@ -4904,7 +4919,7 @@ def create_contract(data):
 
 def create_timetable(sub):
     thread_list = []
-    task = threading.Thread(target=TimetableCreate(), args=(sub,))
+    task = threading.Thread(target=TimetableCreate(), args=(sub, ))
     thread_list.append(task)
     task.deamon = True
     task.start()
@@ -5318,6 +5333,7 @@ def create_timetable_doc(_sub):
     properties.author = "ЦПЮИ ХТИ"
 
     doc.save(path + filename)
+
     return path, filename
 
 
